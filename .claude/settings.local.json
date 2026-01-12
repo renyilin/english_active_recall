@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(git config:*)",
+      "Bash(source:*)",
+      "Bash(pytest:*)",
+      "Bash(timeout 5 uvicorn:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}

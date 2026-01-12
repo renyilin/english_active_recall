@@ -172,3 +172,88 @@ def test_get_due_cards(client: TestClient, auth_headers: dict):
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
+
+
+def test_review_card_easy(client: TestClient, auth_headers: dict):
+    """Test reviewing a card with easy rating."""
+    # Create a card
+    card_data = {
+        "type": "phrase",
+        "target_text": "spill the beans",
+        "target_meaning": "泄露秘密",
+        "context_sentence": "Don't spill the beans about the surprise party.",
+        "context_translation": "不要泄露惊喜派对的秘密。",
+        "cloze_sentence": "Don't _______ about the surprise party.",
+    }
+    create_response = client.post("/api/v1/cards", json=card_data, headers=auth_headers)
+    card_id = create_response.json()["id"]
+    original_interval = create_response.json()["interval"]
+
+    # Review with easy rating
+    response = client.post(
+        f"/api/v1/cards/{card_id}/review",
+        json={"rating": "easy"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["interval"] >= original_interval  # Interval should increase
+
+
+def test_review_card_hard(client: TestClient, auth_headers: dict):
+    """Test reviewing a card with hard rating."""
+    card_data = {
+        "type": "phrase",
+        "target_text": "bite the bullet",
+        "target_meaning": "硬着头皮做",
+        "context_sentence": "Sometimes you just have to bite the bullet.",
+        "context_translation": "有时候你只能硬着头皮做。",
+        "cloze_sentence": "Sometimes you just have to _______.",
+    }
+    create_response = client.post("/api/v1/cards", json=card_data, headers=auth_headers)
+    card_id = create_response.json()["id"]
+
+    # Review with hard rating
+    response = client.post(
+        f"/api/v1/cards/{card_id}/review",
+        json={"rating": "hard"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["interval"] >= 1  # Should have some interval
+
+
+def test_review_card_forgot(client: TestClient, auth_headers: dict):
+    """Test reviewing a card with forgot rating."""
+    card_data = {
+        "type": "phrase",
+        "target_text": "cost an arm and a leg",
+        "target_meaning": "非常昂贵",
+        "context_sentence": "That car cost an arm and a leg.",
+        "context_translation": "那辆车贵得要命。",
+        "cloze_sentence": "That car _______.",
+    }
+    create_response = client.post("/api/v1/cards", json=card_data, headers=auth_headers)
+    card_id = create_response.json()["id"]
+
+    # Review with forgot rating
+    response = client.post(
+        f"/api/v1/cards/{card_id}/review",
+        json={"rating": "forgot"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["interval"] == 0  # Interval should reset
+
+
+def test_review_card_not_found(client: TestClient, auth_headers: dict):
+    """Test reviewing a non-existent card."""
+    fake_id = "00000000-0000-0000-0000-000000000000"
+    response = client.post(
+        f"/api/v1/cards/{fake_id}/review",
+        json={"rating": "easy"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 404

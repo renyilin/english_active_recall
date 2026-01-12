@@ -61,3 +61,17 @@ class CardList(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class ReviewRating(str, Enum):
+    """Review rating options for SRS."""
+
+    FORGOT = "forgot"
+    HARD = "hard"
+    EASY = "easy"
+
+
+class ReviewRequest(BaseModel):
+    """Schema for reviewing/grading a card."""
+
+    rating: ReviewRating

@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     # CORS (for frontend)
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
+    # AI Provider Configuration
+    ai_provider: str = "openai"  # "openai" or "gemini"
+    openai_api_key: str | None = None
+    gemini_api_key: str | None = None
+
 
 @lru_cache
 def get_settings() -> Settings:

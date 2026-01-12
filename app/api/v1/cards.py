@@ -6,7 +6,7 @@ from sqlmodel import Session
 
 from app.core.database import get_session
 from app.dependencies import CurrentUser
-from app.schemas.card import CardCreate, CardList, CardRead, CardType, CardUpdate
+from app.schemas.card import CardCreate, CardList, CardRead, CardType, CardUpdate, ReviewRequest
 from app.services.card_service import CardService
 
 router = APIRouter(prefix="/cards", tags=["Cards"])
@@ -110,3 +110,30 @@ async def delete_card(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Card not found",
         )
+
+
+@router.post("/{card_id}/review", response_model=CardRead)
+async def review_card(
+    card_id: UUID,
+    review_data: ReviewRequest,
+    current_user: CurrentUser,
+    session: Annotated[Session, Depends(get_session)],
+) -> CardRead:
+    """
+    Review a card with SRS grading.
+
+    Rating options:
+    - **forgot**: Reset progress, review in ~10 minutes
+    - **hard**: Small interval increase (x1.2)
+    - **easy**: Large interval increase (x2.5)
+    """
+    card_service = CardService(session)
+    card = card_service.review(
+        user_id=current_user.id, card_id=card_id, rating=review_data.rating
+    )
+    if not card:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Card not found",
+        )
+    return CardRead.model_validate(card)

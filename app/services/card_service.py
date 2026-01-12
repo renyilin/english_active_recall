@@ -1,10 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from sqlmodel import Session, func, select
 
 from app.models.card import Card
-from app.schemas.card import CardCreate, CardUpdate
+from app.schemas.card import CardCreate, CardUpdate, ReviewRating
 
 
 class CardService:
@@ -98,3 +98,49 @@ class CardService:
             .limit(limit)
         )
         return list(self.session.exec(statement).all())
+
+    def review(self, user_id: UUID, card_id: UUID, rating: ReviewRating) -> Card | None:
+        """
+        Review a card and update SRS metadata.
+
+        Simplified SM-2 algorithm:
+        - Forgot: Reset interval to 0, review in < 10 minutes
+        - Hard: Interval = Current * 1.2
+        - Easy: Interval = Current * 2.5
+        """
+        card = self.get_by_id(user_id, card_id)
+        if not card:
+            return None
+
+        now = datetime.utcnow()
+
+        if rating == ReviewRating.FORGOT:
+            # Reset progress, review again soon (10 minutes)
+            card.interval = 0
+            card.next_review = now + timedelta(minutes=10)
+            # Decrease ease factor slightly (min 1.3)
+            card.ease_factor = max(1.3, card.ease_factor - 0.2)
+        elif rating == ReviewRating.HARD:
+            # Small increase
+            if card.interval == 0:
+                card.interval = 1
+            else:
+                card.interval = max(1, int(card.interval * 1.2))
+            card.next_review = now + timedelta(days=card.interval)
+            # Slight ease factor decrease (min 1.3)
+            card.ease_factor = max(1.3, card.ease_factor - 0.1)
+        else:  # EASY
+            # Large increase
+            if card.interval == 0:
+                card.interval = 1
+            else:
+                card.interval = int(card.interval * card.ease_factor)
+            card.next_review = now + timedelta(days=card.interval)
+            # Increase ease factor slightly (max 3.0)
+            card.ease_factor = min(3.0, card.ease_factor + 0.1)
+
+        card.updated_at = now
+        self.session.add(card)
+        self.session.commit()
+        self.session.refresh(card)
+        return card
