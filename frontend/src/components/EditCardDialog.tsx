@@ -126,11 +126,6 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
           size="small"
         />
 
-        <TagSelector
-          selectedTagIds={selectedTagIds}
-          onChange={setSelectedTagIds}
-        />
-
         <TextField
           fullWidth
           label="Context Sentence"
@@ -158,6 +153,11 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
           onChange={(e) => updateField('cloze_sentence', e.target.value)}
           margin="normal"
           size="small"
+        />
+
+        <TagSelector
+          selectedTagIds={selectedTagIds}
+          onChange={setSelectedTagIds}
         />
       </DialogContent>
       <DialogActions>

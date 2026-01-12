@@ -13,6 +13,7 @@ env/
 .vscode/
 *.swp
 *.swo
+.history
 
 # Testing
 .pytest_cache/
