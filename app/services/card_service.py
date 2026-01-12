@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlmodel import Session, func, select
 
 from app.models.card import Card
+from app.models.tag import Tag
 from app.schemas.card import CardCreate, CardUpdate, ReviewRating
 
 
@@ -13,8 +14,18 @@ class CardService:
     def __init__(self, session: Session):
         self.session = session
 
+    def _get_tags_by_ids(self, user_id: UUID, tag_ids: list[UUID]) -> list[Tag]:
+        """Get tags by IDs, scoped to user."""
+        if not tag_ids:
+            return []
+        statement = select(Tag).where(Tag.id.in_(tag_ids), Tag.user_id == user_id)
+        return list(self.session.exec(statement).all())
+
     def create(self, user_id: UUID, card_data: CardCreate) -> Card:
         """Create a new card for a user."""
+        # Get tags if provided
+        tags = self._get_tags_by_ids(user_id, card_data.tag_ids)
+        
         card = Card(
             user_id=user_id,
             type=card_data.type.value,
@@ -23,6 +34,7 @@ class CardService:
             context_sentence=card_data.context_sentence,
             context_translation=card_data.context_translation,
             cloze_sentence=card_data.cloze_sentence,
+            tags=tags,
         )
         self.session.add(card)
         self.session.commit()
@@ -40,6 +52,7 @@ class CardService:
         page: int = 1,
         page_size: int = 20,
         card_type: str | None = None,
+        tag_id: UUID | None = None,
     ) -> tuple[list[Card], int]:
         """Get all cards for a user with pagination."""
         statement = select(Card).where(Card.user_id == user_id)
@@ -67,6 +80,12 @@ class CardService:
             return None
 
         update_data = card_data.model_dump(exclude_unset=True)
+        
+        # Handle tag_ids separately
+        tag_ids = update_data.pop("tag_ids", None)
+        if tag_ids is not None:
+            card.tags = self._get_tags_by_ids(user_id, tag_ids)
+        
         if "type" in update_data and update_data["type"]:
             update_data["type"] = update_data["type"].value
 
@@ -144,3 +163,4 @@ class CardService:
         self.session.commit()
         self.session.refresh(card)
         return card
+

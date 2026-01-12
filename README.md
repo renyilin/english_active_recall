@@ -2,21 +2,52 @@
 
 AI-powered English learning app with Active Recall and Spaced Repetition.
 
-## Quick Start
+## Local Development
+
+### Backend
 
 ```bash
-# Install dependencies
+# Navigate to project root
+cd /path/to/english_active_recall
+
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install dependencies (first time)
 pip install -e ".[dev]"
 
-# Copy environment template
+# Copy and configure environment
 cp .env.example .env
-
 # Edit .env with your database URL and secrets
 
-# Run the server
-uvicorn app.main:app --reload
+# Run database migrations
+alembic upgrade head
 
-# Run tests
+# Start backend server
+uvicorn app.main:app --reload
+```
+
+Backend runs on: http://localhost:8000
+
+### Frontend
+
+```bash
+# In a separate terminal, navigate to frontend
+cd /path/to/english_active_recall/frontend
+
+# Install dependencies (first time)
+npm install
+
+# Start development server
+npm run dev
+```
+
+Frontend runs on: http://localhost:5173
+
+### Run Tests
+
+```bash
+# From project root (with venv activated)
 pytest tests/ -v
 ```
 

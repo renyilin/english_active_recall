@@ -1,7 +1,13 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
+
+if TYPE_CHECKING:
+    from app.models.tag import Tag
+
+from app.models.tag import CardTag
 
 
 class Card(SQLModel, table=True):
@@ -35,3 +41,10 @@ class Card(SQLModel, table=True):
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Relationship to tags through the association table
+    tags: list["Tag"] = Relationship(
+        back_populates="cards",
+        link_model=CardTag,
+    )
+

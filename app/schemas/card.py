@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.tag import TagRead
+
 
 class CardType(str, Enum):
     """Card type enumeration."""
@@ -26,7 +28,7 @@ class CardBase(BaseModel):
 class CardCreate(CardBase):
     """Schema for creating a new card."""
 
-    pass
+    tag_ids: list[UUID] = Field(default_factory=list)
 
 
 class CardUpdate(BaseModel):
@@ -38,6 +40,7 @@ class CardUpdate(BaseModel):
     context_sentence: str | None = Field(default=None, max_length=1000)
     context_translation: str | None = Field(default=None, max_length=1000)
     cloze_sentence: str | None = Field(default=None, max_length=1000)
+    tag_ids: list[UUID] | None = None
 
 
 class CardRead(CardBase):
@@ -50,6 +53,7 @@ class CardRead(CardBase):
     next_review: datetime
     created_at: datetime
     updated_at: datetime
+    tags: list[TagRead] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 
@@ -75,3 +79,4 @@ class ReviewRequest(BaseModel):
     """Schema for reviewing/grading a card."""
 
     rating: ReviewRating
+

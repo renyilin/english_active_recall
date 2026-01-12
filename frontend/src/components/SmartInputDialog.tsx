@@ -19,6 +19,7 @@ import {
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { generateApi, cardsApi } from '../services/api';
 import type { CardCreate } from '../services/api';
+import TagSelector from './TagSelector';
 
 interface SmartInputDialogProps {
   open: boolean;
@@ -39,6 +40,7 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
   const [inputText, setInputText] = useState('');
   const [generatedData, setGeneratedData] = useState<GeneratedData | null>(null);
   const [editedData, setEditedData] = useState<GeneratedData | null>(null);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -69,7 +71,11 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
     setError('');
 
     try {
-      await cardsApi.create(editedData as CardCreate);
+      const cardData: CardCreate = {
+        ...editedData,
+        tag_ids: selectedTagIds,
+      };
+      await cardsApi.create(cardData);
       handleClose();
       onSuccess();
     } catch (err: unknown) {
@@ -84,6 +90,7 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
     setInputText('');
     setGeneratedData(null);
     setEditedData(null);
+    setSelectedTagIds([]);
     setError('');
     onClose();
   };
@@ -163,6 +170,11 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
               size="small"
             />
 
+            <TagSelector
+              selectedTagIds={selectedTagIds}
+              onChange={setSelectedTagIds}
+            />
+
             <Divider sx={{ my: 2 }} />
 
             <TextField
@@ -224,3 +236,4 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
     </Dialog>
   );
 }
+

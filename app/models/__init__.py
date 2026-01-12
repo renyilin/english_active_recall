@@ -1,4 +1,5 @@
 from app.models.card import Card
+from app.models.tag import CardTag, Tag
 from app.models.user import User
 
-__all__ = ["User", "Card"]
+__all__ = ["User", "Card", "Tag", "CardTag"]

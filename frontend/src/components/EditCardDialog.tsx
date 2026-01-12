@@ -13,7 +13,8 @@ import {
   Alert,
 } from '@mui/material';
 import { cardsApi } from '../services/api';
-import type { Card } from '../services/api';
+import type { Card, CardUpdate } from '../services/api';
+import TagSelector from './TagSelector';
 
 interface EditCardDialogProps {
   card: Card | null;
@@ -37,6 +38,7 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
     context_translation: '',
     cloze_sentence: '',
   });
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -50,6 +52,7 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
         context_translation: card.context_translation,
         cloze_sentence: card.cloze_sentence,
       });
+      setSelectedTagIds(card.tags?.map((tag) => tag.id) || []);
     }
   }, [card]);
 
@@ -60,10 +63,15 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
     setError('');
 
     try {
-      const updateData = {
-        ...formData,
+      const updateData: CardUpdate = {
         type: formData.type || undefined,
-      } as { type?: 'phrase' | 'sentence'; target_text: string; target_meaning: string; context_sentence: string; context_translation: string; cloze_sentence: string };
+        target_text: formData.target_text,
+        target_meaning: formData.target_meaning,
+        context_sentence: formData.context_sentence,
+        context_translation: formData.context_translation,
+        cloze_sentence: formData.cloze_sentence,
+        tag_ids: selectedTagIds,
+      };
       await cardsApi.update(card.id, updateData);
       onSuccess();
     } catch (err: unknown) {
@@ -118,6 +126,11 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
           size="small"
         />
 
+        <TagSelector
+          selectedTagIds={selectedTagIds}
+          onChange={setSelectedTagIds}
+        />
+
         <TextField
           fullWidth
           label="Context Sentence"
@@ -156,3 +169,4 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
     </Dialog>
   );
 }
+
