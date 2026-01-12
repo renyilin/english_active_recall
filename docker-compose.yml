@@ -1,0 +1,58 @@
+# Docker Compose for English Active Recall
+# Backend + Frontend (Database hosted on Neon.tech)
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    container_name: english-recall-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Database - Neon PostgreSQL
+      - DATABASE_URL=${DATABASE_URL}
+      # JWT Secrets
+      - SECRET_KEY=${SECRET_KEY}
+      - REFRESH_SECRET_KEY=${REFRESH_SECRET_KEY}
+      # App Config
+      - APP_NAME=${APP_NAME:-English Active Recall API}
+      - DEBUG=${DEBUG:-false}
+      - API_V1_PREFIX=${API_V1_PREFIX:-/api/v1}
+      # Token Expiration
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      # CORS - allow frontend container
+      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://localhost:5173","http://localhost"]}
+      # AI Providers (optional)
+      - AI_PROVIDER=${AI_PROVIDER:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Set API URL at build time - change this to your backend URL
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+    container_name: english-recall-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s

@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+tests/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Environment files (use docker-compose env vars instead)
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
+build/
+
+# Frontend (built separately)
+frontend/
+
+# Documentation (keep README.md for pyproject.toml)
+AGENTS.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker files (don't need to copy these into the image)
+docker-compose.yml
+*.Dockerfile
+.dockerignore

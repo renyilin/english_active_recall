@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output (generated during docker build)
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Documentation
+*.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker files
+Dockerfile
+.dockerignore
