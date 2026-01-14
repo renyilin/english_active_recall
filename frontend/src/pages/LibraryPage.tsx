@@ -80,12 +80,12 @@ export default function LibraryPage() {
     )
     : cards;
 
-  const columns: GridColDef[] = [
+  const columns: GridColDef<CardType>[] = [
     {
       field: 'type',
       headerName: 'Type',
       width: 100,
-      renderCell: (params: GridRenderCellParams) => (
+      renderCell: (params: GridRenderCellParams<CardType, string>) => (
         <Chip
           label={params.value}
           size="small"
@@ -96,10 +96,30 @@ export default function LibraryPage() {
     { field: 'target_text', headerName: 'English', flex: 1, minWidth: 150 },
     { field: 'target_meaning', headerName: 'Meaning', flex: 1, minWidth: 150 },
     {
+      field: 'tags',
+      headerName: 'Tags',
+      width: 200,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams<CardType, CardType['tags']>) => (
+        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          {params.value?.map((tag) => (
+            <Chip key={tag.id} label={tag.name} size="small" variant="outlined" />
+          ))}
+        </Box>
+      ),
+    },
+    {
       field: 'interval',
       headerName: 'Interval',
       width: 80,
-      renderCell: (params: GridRenderCellParams) => `${params.value}d`,
+      renderCell: (params: GridRenderCellParams<CardType, number>) => `${params.value}d`,
+    },
+    {
+      field: 'ease_factor',
+      headerName: 'Ease Factor',
+      width: 100,
+      renderCell: (params: GridRenderCellParams<CardType, number>) =>
+        params.value?.toFixed(2) ?? '0.00',
     },
     {
       field: 'actions',
