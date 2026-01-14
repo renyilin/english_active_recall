@@ -105,3 +105,9 @@ docker-compose exec backend bash
 Once the server is running, visit:
 - Swagger UI: http://localhost:8000/api/v1/docs
 - ReDoc: http://localhost:8000/api/v1/redoc
+
+## Database in Production
+
+### Neon.tech
+
+- URL: https://neon.tech
