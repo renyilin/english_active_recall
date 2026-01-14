@@ -25,6 +25,7 @@ export default function FlashcardDisplay({ card, isFlipped, onFlip }: FlashcardD
         cursor: 'pointer',
         transition: 'transform 0.3s',
         '&:hover': { transform: 'scale(1.01)' },
+        backgroundColor: isFlipped ? '#f8f7ff' : undefined,
       }}
       onClick={onFlip}
     >
@@ -54,9 +55,6 @@ export default function FlashcardDisplay({ card, isFlipped, onFlip }: FlashcardD
               <Typography variant="h5" gutterBottom>
                 {card.target_meaning}
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Speak the English sentence
-              </Typography>
             </Box>
           ) : (
             // Phrase Mode: Show cloze + Chinese hint
@@ -66,9 +64,6 @@ export default function FlashcardDisplay({ card, isFlipped, onFlip }: FlashcardD
               </Typography>
               <Typography variant="body1" color="text.secondary">
                 Hint: {card.target_meaning}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Speak the missing phrase
               </Typography>
             </Box>
           )
