@@ -37,6 +37,23 @@ export default function TestPage() {
     fetchDueCards();
   }, [fetchDueCards]);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle if not loading, has cards, and not currently reviewing
+      if (isLoading || dueCards.length === 0 || isReviewing) {
+        return;
+      }
+
+      if (event.key === ' ' || event.code === 'Space') {
+        event.preventDefault();
+        setIsFlipped((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLoading, dueCards.length, isReviewing]);
+
   const currentCard = dueCards[currentIndex];
 
   const handleReview = async (rating: 'forgot' | 'hard' | 'remembered') => {

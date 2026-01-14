@@ -97,6 +97,9 @@ export default function StudyPage() {
         handlePreviousCard();
       } else if (event.key === 'ArrowRight') {
         handleNextCard();
+      } else if (event.key === ' ' || event.code === 'Space') {
+        event.preventDefault();
+        setIsFlipped((prev) => !prev);
       }
     };
 
