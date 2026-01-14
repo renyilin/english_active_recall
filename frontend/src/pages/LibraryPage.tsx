@@ -101,7 +101,7 @@ export default function LibraryPage() {
       width: 200,
       sortable: false,
       renderCell: (params: GridRenderCellParams<CardType, CardType['tags']>) => (
-        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center', height: '100%' }}>
           {params.value?.map((tag) => (
             <Chip key={tag.id} label={tag.name} size="small" variant="outlined" />
           ))}
