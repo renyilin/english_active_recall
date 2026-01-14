@@ -131,7 +131,6 @@ export default function StudyPage() {
 
             {/* Strategy Selection */}
             <FormControl component="fieldset">
-              <FormLabel component="legend">Study Strategy</FormLabel>
               <RadioGroup
                 value={strategy}
                 onChange={(e) => setStrategy(e.target.value as 'hardest' | 'random' | 'tag')}
@@ -139,17 +138,17 @@ export default function StudyPage() {
                 <FormControlLabel
                   value="hardest"
                   control={<Radio />}
-                  label="Study the hardest cards (default)"
+                  label="Hardest cards"
                 />
                 <FormControlLabel
                   value="random"
                   control={<Radio />}
-                  label="Randomly study"
+                  label="Random"
                 />
                 <FormControlLabel
                   value="tag"
                   control={<Radio />}
-                  label="Study by tag"
+                  label="By tag"
                 />
               </RadioGroup>
             </FormControl>
