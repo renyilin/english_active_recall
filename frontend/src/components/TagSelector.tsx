@@ -11,19 +11,26 @@ import type { Tag } from '../services/api';
 interface TagSelectorProps {
     selectedTagIds: string[];
     onChange: (tagIds: string[]) => void;
+    availableTags?: Tag[];
 }
 
-export default function TagSelector({ selectedTagIds, onChange }: TagSelectorProps) {
+export default function TagSelector({ selectedTagIds, onChange, availableTags }: TagSelectorProps) {
     const [tags, setTags] = useState<Tag[]>([]);
     const [loading, setLoading] = useState(true);
     const [inputValue, setInputValue] = useState('');
 
     useEffect(() => {
-        loadTags();
-    }, []);
+        if (availableTags) {
+            setTags(availableTags);
+            setLoading(false);
+        } else {
+            loadTags();
+        }
+    }, [availableTags]);
 
     const loadTags = async () => {
         try {
+            setLoading(true);
             const response = await tagsApi.list();
             setTags(response.data.items);
         } catch (err) {

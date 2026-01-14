@@ -17,8 +17,8 @@ import {
   MenuItem,
 } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import { generateApi, cardsApi } from '../services/api';
-import type { CardCreate } from '../services/api';
+import { generateApi, cardsApi, tagsApi } from '../services/api';
+import type { CardCreate, Tag } from '../services/api';
 import TagSelector from './TagSelector';
 
 interface SmartInputDialogProps {
@@ -34,6 +34,7 @@ interface GeneratedData {
   context_sentence: string;
   context_translation: string;
   cloze_sentence: string;
+  tags?: string[];
 }
 
 export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInputDialogProps) {
@@ -41,6 +42,7 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
   const [generatedData, setGeneratedData] = useState<GeneratedData | null>(null);
   const [editedData, setEditedData] = useState<GeneratedData | null>(null);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<Tag[] | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -56,6 +58,38 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
       const data: GeneratedData = response.data;
       setGeneratedData(data);
       setEditedData(data);
+
+      if (data.tags && data.tags.length > 0) {
+        try {
+          // fetch all existing tags
+          const tagsResponse = await tagsApi.list();
+          let allTags = tagsResponse.data.items;
+          const newTagIds: string[] = [];
+
+          for (const tagName of data.tags) {
+            const existingTag = allTags.find(
+              (t) => t.name.toLowerCase() === tagName.toLowerCase()
+            );
+
+            if (existingTag) {
+              newTagIds.push(existingTag.id);
+            } else {
+              try {
+                const newTagResponse = await tagsApi.create({ name: tagName });
+                const newTag = newTagResponse.data;
+                newTagIds.push(newTag.id);
+                allTags = [...allTags, newTag];
+              } catch (createErr) {
+                console.error(`Failed to create tag ${tagName}:`, createErr);
+              }
+            }
+          }
+          setAvailableTags(allTags);
+          setSelectedTagIds(newTagIds);
+        } catch (tagErr) {
+          console.error('Failed to process generated tags:', tagErr);
+        }
+      }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } };
       setError(error.response?.data?.detail || 'Failed to generate card data');
@@ -173,6 +207,7 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
             <TagSelector
               selectedTagIds={selectedTagIds}
               onChange={setSelectedTagIds}
+              availableTags={availableTags}
             />
 
             <Divider sx={{ my: 2 }} />

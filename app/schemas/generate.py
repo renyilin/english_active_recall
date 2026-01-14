@@ -28,3 +28,4 @@ class GenerateResponse(BaseModel):
     context_sentence: str = Field(description="Example sentence using the target")
     context_translation: str = Field(description="Chinese translation of context sentence")
     cloze_sentence: str = Field(description="Context sentence with blank")
+    tags: list[str] = Field(description="Suggested tags", default_factory=list)

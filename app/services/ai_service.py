@@ -17,7 +17,8 @@ Instructions:
    - If Sentence: Use input as-is (correct grammar if needed).
 4. Generate context_translation: Translate the full example sentence (Simplified Chinese).
 5. Generate cloze_sentence: Replace target in context with "_______".
-6. Output JSON only.
+6. Generate tags: Select the most relevant tag ONLY from this list: ['sport', 'travel', 'life', 'health', 'shopping', 'food', 'people', 'work', 'weather', 'tech']. Return empty list if none apply.
+7. Output JSON only.
 
 Output format (strict JSON, no markdown):
 {
@@ -26,7 +27,8 @@ Output format (strict JSON, no markdown):
   "target_meaning": "Chinese meaning",
   "context_sentence": "Natural example sentence in English",
   "context_translation": "Chinese translation of context_sentence",
-  "cloze_sentence": "Context sentence with _______ replacing target"
+  "cloze_sentence": "Context sentence with _______ replacing target",
+  "tags": ["tag1"]
 }"""
 
 
