@@ -1,4 +1,5 @@
 import { Box, Typography, Card as MuiCard, CardContent, IconButton, Chip } from '@mui/material';
+import { useState, useEffect, useCallback } from 'react';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import type { Card } from '../services/api';
 
@@ -9,12 +10,44 @@ interface FlashcardDisplayProps {
 }
 
 export default function FlashcardDisplay({ card, isFlipped, onFlip }: FlashcardDisplayProps) {
-  const speakText = (text: string) => {
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState(() => {
+    return localStorage.getItem('autoPlayAudio') === 'true';
+  });
+
+  const toggleAutoPlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newValue = !autoPlayEnabled;
+    setAutoPlayEnabled(newValue);
+    localStorage.setItem('autoPlayAudio', String(newValue));
+  };
+
+  const speakText = useCallback((text: string) => {
+    // Cancel any ongoing speech first
+    window.speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
     utterance.rate = 0.9;
-    speechSynthesis.speak(utterance);
-  };
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
+  // Handle auto-play when flipped
+  useEffect(() => {
+    // Cancel speech when component unmounts or card changes
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, [card]);
+
+  useEffect(() => {
+    if (isFlipped && autoPlayEnabled) {
+      // Small timeout to ensure transition looks natural before audio starts
+      const timer = setTimeout(() => {
+        speakText(card.context_sentence);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isFlipped, autoPlayEnabled, card.context_sentence, speakText]);
 
   const renderCardContent = (side: 'front' | 'back') => (
     <CardContent
@@ -27,8 +60,39 @@ export default function FlashcardDisplay({ card, isFlipped, onFlip }: FlashcardD
         textAlign: 'center',
         p: 4,
         height: '100%', // Ensure content takes full height
+        position: 'relative',
       }}
     >
+      {/* Auto-play toggle - visible on both sides for easy access */}
+      <IconButton
+        onClick={toggleAutoPlay}
+        size="small"
+        color={autoPlayEnabled ? 'primary' : 'default'}
+        sx={{
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          opacity: 0.7,
+          '&:hover': { opacity: 1 },
+        }}
+        title={autoPlayEnabled ? "Disable auto-play" : "Enable auto-play"}
+      >
+        <VolumeUpIcon />
+        {!autoPlayEnabled && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: '120%',
+              height: '2px',
+              bgcolor: 'text.disabled',
+              transform: 'translate(-50%, -50%) rotate(-45deg)',
+            }}
+          />
+        )}
+      </IconButton>
+
       <Chip
         label={card.type}
         size="small"
