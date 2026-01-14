@@ -29,7 +29,7 @@ A dashboard to manage the knowledge base.
 * **Filters:** By Type (Sentence vs. Phrase), By Status (New/Learning/Mastered).
 * **Interactions:** Expand row to see full context; Quick-edit; Delete.
 
-### D. Study Mode (The Flashcard)
+### D. Test Mode (The Flashcard)
 The app serves cards based on the SRS schedule.
 * **Mode 1: Sentence Mode** (For full sentences)
     * *Front:* Chinese Meaning.
@@ -40,7 +40,14 @@ The app serves cards based on the SRS schedule.
 * **Feedback:**
     * Flip card to reveal answer.
     * **Audio Button:** Text-to-Speech playback.
-    * **Grading:** User selects [Forgot] / [Hard] / [Easy].
+    * **Grading:** User selects [Forgot] / [Hard] / [Remembered].
+
+### E. Preview Mode (The Flashcard)
+At first, it provides options:
+1. how many cards want to learn (50 cards by default); 
+2. study mode: randomly study; hardest cards (by default; order by ease factor); study by tag.
+
+Then users can go through all flashcard that meets the conditions. The difference from testing mode is that it doesn't need feedback.
 
 ---
 
