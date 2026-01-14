@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import LibraryPage from './pages/LibraryPage';
 import StudyPage from './pages/StudyPage';
+import TestPage from './pages/TestPage';
 import './App.css';
 
 const theme = createTheme({
@@ -77,6 +78,7 @@ function AppRoutes() {
       >
         <Route index element={<LibraryPage />} />
         <Route path="study" element={<StudyPage />} />
+        <Route path="test" element={<TestPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

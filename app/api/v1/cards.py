@@ -61,6 +61,32 @@ async def get_due_cards(
     return [CardRead.model_validate(card) for card in cards]
 
 
+@router.get("/study", response_model=list[CardRead])
+async def get_study_cards(
+    current_user: CurrentUser,
+    session: Annotated[Session, Depends(get_session)],
+    limit: int = Query(default=30, ge=1, le=100),
+    strategy: str = Query(default="hardest", pattern="^(hardest|random|tag)$"),
+    tag_ids: list[UUID] | None = Query(default=None),
+) -> list[CardRead]:
+    """
+    Get cards for study mode (review without SRS updates).
+
+    Selection strategies:
+    - **hardest**: Cards with shortest intervals and lowest ease factors
+    - **random**: Random selection of cards
+    - **tag**: Filter cards by selected tags (requires tag_ids parameter)
+    """
+    card_service = CardService(session)
+    cards = card_service.get_study_cards(
+        user_id=current_user.id,
+        limit=limit,
+        strategy=strategy,
+        tag_ids=tag_ids,
+    )
+    return [CardRead.model_validate(card) for card in cards]
+
+
 @router.get("/{card_id}", response_model=CardRead)
 async def get_card(
     card_id: UUID,
@@ -125,7 +151,7 @@ async def review_card(
     Rating options:
     - **forgot**: Reset progress, review in ~10 minutes
     - **hard**: Small interval increase (x1.2)
-    - **easy**: Large interval increase (x2.5)
+    - **remembered**: Large interval increase (x2.5)
     """
     card_service = CardService(session)
     card = card_service.review(

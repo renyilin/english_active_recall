@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlmodel import Session, func, select
 
 from app.models.card import Card
-from app.models.tag import Tag
+from app.models.tag import CardTag, Tag
 from app.schemas.card import CardCreate, CardUpdate, ReviewRating
 
 
@@ -118,6 +118,43 @@ class CardService:
         )
         return list(self.session.exec(statement).all())
 
+    def get_study_cards(
+        self,
+        user_id: UUID,
+        limit: int = 30,
+        strategy: str = "hardest",
+        tag_ids: list[UUID] | None = None,
+    ) -> list[Card]:
+        """
+        Get cards for study mode based on selection strategy.
+
+        Args:
+            user_id: The user's UUID
+            limit: Maximum number of cards to return (default 30)
+            strategy: Selection strategy - "hardest", "random", or "tag"
+            tag_ids: List of tag UUIDs for tag-based selection
+
+        Returns:
+            List of Card objects based on the strategy
+        """
+        statement = select(Card).where(Card.user_id == user_id)
+
+        if strategy == "hardest":
+            # Low interval + low ease_factor = historically difficult cards
+            statement = statement.order_by(Card.interval, Card.ease_factor)
+        elif strategy == "random":
+            statement = statement.order_by(func.random())
+        elif strategy == "tag" and tag_ids:
+            # Join with card_tags and filter by tag IDs
+            statement = (
+                statement
+                .join(CardTag, Card.id == CardTag.card_id)
+                .where(CardTag.tag_id.in_(tag_ids))
+            )
+
+        statement = statement.limit(limit)
+        return list(self.session.exec(statement).all())
+
     def review(self, user_id: UUID, card_id: UUID, rating: ReviewRating) -> Card | None:
         """
         Review a card and update SRS metadata.
@@ -125,7 +162,7 @@ class CardService:
         Simplified SM-2 algorithm:
         - Forgot: Reset interval to 0, review in < 10 minutes
         - Hard: Interval = Current * 1.2
-        - Easy: Interval = Current * 2.5
+        - Remembered: Interval = Current * 2.5
         """
         card = self.get_by_id(user_id, card_id)
         if not card:
@@ -148,7 +185,7 @@ class CardService:
             card.next_review = now + timedelta(days=card.interval)
             # Slight ease factor decrease (min 1.3)
             card.ease_factor = max(1.3, card.ease_factor - 0.1)
-        else:  # EASY
+        else:  # REMEMBERED
             # Large increase
             if card.interval == 0:
                 card.interval = 1

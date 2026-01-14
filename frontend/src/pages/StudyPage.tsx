@@ -1,76 +1,178 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
-  IconButton,
   Chip,
   CircularProgress,
+  TextField,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  FormControl,
+  FormLabel,
+  Paper,
   Stack,
 } from '@mui/material';
-import VolumeUpIcon from '@mui/icons-material/VolumeUp';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import { cardsApi } from '../services/api';
-import type { Card as CardType } from '../services/api';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { cardsApi, tagsApi } from '../services/api';
+import type { Card as CardType, Tag } from '../services/api';
+import FlashcardDisplay from '../components/FlashcardDisplay';
+import TagSelector from '../components/TagSelector';
 
 export default function StudyPage() {
-  const [dueCards, setDueCards] = useState<CardType[]>([]);
+  // Phase 1: Configuration state
+  const [isConfiguring, setIsConfiguring] = useState(true);
+  const [cardLimit, setCardLimit] = useState(30);
+  const [strategy, setStrategy] = useState<'hardest' | 'random' | 'tag'>('hardest');
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+
+  // Phase 2: Study session state
+  const [studyCards, setStudyCards] = useState<CardType[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isReviewing, setIsReviewing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSessionComplete, setIsSessionComplete] = useState(false);
 
-  const fetchDueCards = useCallback(async () => {
+  // Fetch available tags for tag strategy
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const response = await tagsApi.list();
+        setAvailableTags(response.data.items);
+      } catch (error) {
+        console.error('Failed to fetch tags:', error);
+      }
+    };
+    fetchTags();
+  }, []);
+
+  const handleStartStudy = async () => {
+    if (strategy === 'tag' && selectedTags.length === 0) {
+      alert('Please select at least one tag');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const response = await cardsApi.getDue(50);
-      setDueCards(response.data);
+      const tagIds = strategy === 'tag' ? selectedTags.map(tag => tag.id) : undefined;
+      const response = await cardsApi.getStudy(cardLimit, strategy, tagIds);
+      setStudyCards(response.data);
       setCurrentIndex(0);
       setIsFlipped(false);
+      setIsSessionComplete(false);
+      setIsConfiguring(false);
     } catch (error) {
-      console.error('Failed to fetch due cards:', error);
+      console.error('Failed to fetch study cards:', error);
+      alert('Failed to load study cards. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    fetchDueCards();
-  }, [fetchDueCards]);
-
-  const currentCard = dueCards[currentIndex];
-
-  const handleReview = async (rating: 'forgot' | 'hard' | 'easy') => {
-    if (!currentCard || isReviewing) return;
-
-    setIsReviewing(true);
-    try {
-      await cardsApi.review(currentCard.id, rating);
-
-      // Move to next card
-      if (currentIndex < dueCards.length - 1) {
-        setCurrentIndex((prev) => prev + 1);
-        setIsFlipped(false);
-      } else {
-        // No more cards
-        setDueCards([]);
-      }
-    } catch (error) {
-      console.error('Failed to review card:', error);
-    } finally {
-      setIsReviewing(false);
+  const handleNextCard = () => {
+    if (currentIndex < studyCards.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+      setIsFlipped(false);
+    } else {
+      setIsSessionComplete(true);
     }
   };
 
-  const speakText = (text: string) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.9;
-    speechSynthesis.speak(utterance);
+  const handleStartNewSession = () => {
+    setIsConfiguring(true);
+    setStudyCards([]);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setIsSessionComplete(false);
   };
 
+  const currentCard = studyCards[currentIndex];
+
+  // Phase 1: Configuration Screen
+  if (isConfiguring) {
+    return (
+      <Box sx={{ p: 3, maxWidth: 600, mx: 'auto' }}>
+        <Typography variant="h4" gutterBottom>
+          Study Mode
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+          Practice flashcards without affecting your spaced repetition schedule
+        </Typography>
+
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Stack spacing={3}>
+            {/* Card Limit */}
+            <TextField
+              label="Number of cards"
+              type="number"
+              value={cardLimit}
+              onChange={(e) => setCardLimit(Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))}
+              helperText="Select between 1 and 100 cards"
+              fullWidth
+              inputProps={{ min: 1, max: 100 }}
+            />
+
+            {/* Strategy Selection */}
+            <FormControl component="fieldset">
+              <FormLabel component="legend">Study Strategy</FormLabel>
+              <RadioGroup
+                value={strategy}
+                onChange={(e) => setStrategy(e.target.value as 'hardest' | 'random' | 'tag')}
+              >
+                <FormControlLabel
+                  value="hardest"
+                  control={<Radio />}
+                  label="Study the hardest cards (default)"
+                />
+                <FormControlLabel
+                  value="random"
+                  control={<Radio />}
+                  label="Randomly study"
+                />
+                <FormControlLabel
+                  value="tag"
+                  control={<Radio />}
+                  label="Study by tag"
+                />
+              </RadioGroup>
+            </FormControl>
+
+            {/* Tag Selector (conditional) */}
+            {strategy === 'tag' && (
+              <Box>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Select tags to filter cards
+                </Typography>
+                <TagSelector
+                  availableTags={availableTags}
+                  selectedTags={selectedTags}
+                  onSelectionChange={setSelectedTags}
+                />
+              </Box>
+            )}
+
+            {/* Start Button */}
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<PlayArrowIcon />}
+              onClick={handleStartStudy}
+              disabled={isLoading}
+              fullWidth
+            >
+              {isLoading ? 'Loading...' : 'Start Study Session'}
+            </Button>
+          </Stack>
+        </Paper>
+      </Box>
+    );
+  }
+
+  // Loading state
   if (isLoading) {
     return (
       <Box
@@ -86,7 +188,41 @@ export default function StudyPage() {
     );
   }
 
-  if (dueCards.length === 0) {
+  // Session complete
+  if (isSessionComplete) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '60vh',
+          textAlign: 'center',
+          p: 3,
+        }}
+      >
+        <CheckCircleIcon sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
+        <Typography variant="h4" gutterBottom>
+          Session Complete!
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+          You've reviewed {studyCards.length} {studyCards.length === 1 ? 'card' : 'cards'}
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<PlayArrowIcon />}
+          onClick={handleStartNewSession}
+          size="large"
+        >
+          Start New Session
+        </Button>
+      </Box>
+    );
+  }
+
+  // No cards found
+  if (studyCards.length === 0) {
     return (
       <Box
         sx={{
@@ -100,116 +236,40 @@ export default function StudyPage() {
         }}
       >
         <Typography variant="h4" gutterBottom>
-          All caught up!
+          No cards found
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-          No cards due for review right now. Add more cards or come back later.
+          No cards match your selected criteria. Try different settings.
         </Typography>
         <Button
           variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={fetchDueCards}
+          onClick={handleStartNewSession}
         >
-          Check Again
+          Back to Settings
         </Button>
       </Box>
     );
   }
 
+  // Phase 2: Flashcard Viewer
   return (
     <Box sx={{ p: 3, maxWidth: 600, mx: 'auto' }}>
       {/* Progress */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h5">Study Mode</Typography>
         <Chip
-          label={`${currentIndex + 1} / ${dueCards.length}`}
+          label={`${currentIndex + 1} / ${studyCards.length}`}
           color="primary"
           variant="outlined"
         />
       </Box>
 
       {/* Flashcard */}
-      <Card
-        sx={{
-          minHeight: 300,
-          display: 'flex',
-          flexDirection: 'column',
-          cursor: 'pointer',
-          transition: 'transform 0.3s',
-          '&:hover': { transform: 'scale(1.01)' },
-        }}
-        onClick={() => setIsFlipped(!isFlipped)}
-      >
-        <CardContent
-          sx={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center',
-            p: 4,
-          }}
-        >
-          <Chip
-            label={currentCard.type}
-            size="small"
-            color={currentCard.type === 'phrase' ? 'primary' : 'secondary'}
-            sx={{ mb: 2 }}
-          />
-
-          {!isFlipped ? (
-            // Front of card
-            currentCard.type === 'sentence' ? (
-              // Sentence Mode: Show Chinese meaning
-              <Box>
-                <Typography variant="h5" gutterBottom>
-                  {currentCard.target_meaning}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                  Speak the English sentence
-                </Typography>
-              </Box>
-            ) : (
-              // Phrase Mode: Show cloze + Chinese hint
-              <Box>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  {currentCard.cloze_sentence}
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  Hint: {currentCard.target_meaning}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                  Speak the missing phrase
-                </Typography>
-              </Box>
-            )
-          ) : (
-            // Back of card (Answer)
-            <Box>
-              <Typography variant="h5" color="primary" gutterBottom>
-                {currentCard.target_text}
-              </Typography>
-              <Typography variant="body1" sx={{ mt: 2 }}>
-                {currentCard.context_sentence}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                {currentCard.context_translation}
-              </Typography>
-              <IconButton
-                sx={{ mt: 2 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  speakText(currentCard.context_sentence);
-                }}
-                color="primary"
-              >
-                <VolumeUpIcon />
-              </IconButton>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
+      <FlashcardDisplay
+        card={currentCard}
+        isFlipped={isFlipped}
+        onFlip={() => setIsFlipped(!isFlipped)}
+      />
 
       {/* Tap to flip hint */}
       {!isFlipped && (
@@ -223,41 +283,33 @@ export default function StudyPage() {
         </Typography>
       )}
 
-      {/* Grading buttons */}
+      {/* Next button */}
       {isFlipped && (
-        <Stack direction="row" spacing={2} sx={{ mt: 3 }} justifyContent="center">
+        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
           <Button
             variant="contained"
-            color="error"
             size="large"
-            onClick={() => handleReview('forgot')}
-            disabled={isReviewing}
-            sx={{ flex: 1, maxWidth: 120 }}
+            endIcon={<ArrowForwardIcon />}
+            onClick={handleNextCard}
+            fullWidth
+            sx={{ maxWidth: 300 }}
           >
-            Forgot
+            {currentIndex < studyCards.length - 1 ? 'Next Card' : 'Complete Session'}
           </Button>
-          <Button
-            variant="contained"
-            color="warning"
-            size="large"
-            onClick={() => handleReview('hard')}
-            disabled={isReviewing}
-            sx={{ flex: 1, maxWidth: 120 }}
-          >
-            Hard
-          </Button>
-          <Button
-            variant="contained"
-            color="success"
-            size="large"
-            onClick={() => handleReview('easy')}
-            disabled={isReviewing}
-            sx={{ flex: 1, maxWidth: 120 }}
-          >
-            Easy
-          </Button>
-        </Stack>
+        </Box>
       )}
+
+      {/* Exit study mode */}
+      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+        <Button
+          variant="text"
+          size="small"
+          onClick={handleStartNewSession}
+          color="inherit"
+        >
+          Exit Study Mode
+        </Button>
+      </Box>
     </Box>
   );
 }

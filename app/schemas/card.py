@@ -72,7 +72,7 @@ class ReviewRating(str, Enum):
 
     FORGOT = "forgot"
     HARD = "hard"
-    EASY = "easy"
+    REMEMBERED = "remembered"
 
 
 class ReviewRequest(BaseModel):

@@ -257,3 +257,117 @@ def test_review_card_not_found(client: TestClient, auth_headers: dict):
         headers=auth_headers,
     )
     assert response.status_code == 404
+
+
+def test_review_card_remembered(client: TestClient, auth_headers: dict):
+    """Test reviewing a card with remembered rating (new naming)."""
+    card_data = {
+        "type": "phrase",
+        "target_text": "once in a blue moon",
+        "target_meaning": "千载难逢",
+        "context_sentence": "We only meet once in a blue moon.",
+        "context_translation": "我们很少见面。",
+        "cloze_sentence": "We only meet _______.",
+    }
+    create_response = client.post("/api/v1/cards", json=card_data, headers=auth_headers)
+    card_id = create_response.json()["id"]
+    original_interval = create_response.json()["interval"]
+
+    # Review with remembered rating
+    response = client.post(
+        f"/api/v1/cards/{card_id}/review",
+        json={"rating": "remembered"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["interval"] >= original_interval  # Interval should increase
+
+
+def test_get_study_cards_hardest_strategy(client: TestClient, auth_headers: dict):
+    """Test getting study cards with hardest strategy."""
+    # Create multiple cards
+    for i in range(3):
+        card_data = {
+            "type": "phrase",
+            "target_text": f"test phrase {i}",
+            "target_meaning": f"测试短语 {i}",
+            "context_sentence": f"This is test phrase {i}.",
+            "context_translation": f"这是测试短语 {i}。",
+            "cloze_sentence": f"This is _______.",
+        }
+        client.post("/api/v1/cards", json=card_data, headers=auth_headers)
+
+    # Get study cards with hardest strategy
+    response = client.get(
+        "/api/v1/cards/study?limit=10&strategy=hardest",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 3
+
+
+def test_get_study_cards_random_strategy(client: TestClient, auth_headers: dict):
+    """Test getting study cards with random strategy."""
+    # Create multiple cards
+    for i in range(5):
+        card_data = {
+            "type": "phrase",
+            "target_text": f"random phrase {i}",
+            "target_meaning": f"随机短语 {i}",
+            "context_sentence": f"This is random phrase {i}.",
+            "context_translation": f"这是随机短语 {i}。",
+            "cloze_sentence": f"This is _______.",
+        }
+        client.post("/api/v1/cards", json=card_data, headers=auth_headers)
+
+    # Get study cards with random strategy
+    response = client.get(
+        "/api/v1/cards/study?limit=5&strategy=random",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 5
+
+
+def test_get_study_cards_requires_auth(client: TestClient):
+    """Test that study endpoint requires authentication."""
+    response = client.get("/api/v1/cards/study")
+    assert response.status_code == 401
+
+
+def test_get_study_cards_invalid_strategy(client: TestClient, auth_headers: dict):
+    """Test getting study cards with invalid strategy returns validation error."""
+    response = client.get(
+        "/api/v1/cards/study?strategy=invalid",
+        headers=auth_headers,
+    )
+    assert response.status_code == 422  # Validation error
+
+
+def test_get_study_cards_with_limit(client: TestClient, auth_headers: dict):
+    """Test that study endpoint respects limit parameter."""
+    # Create multiple cards
+    for i in range(10):
+        card_data = {
+            "type": "phrase",
+            "target_text": f"limit test {i}",
+            "target_meaning": f"限制测试 {i}",
+            "context_sentence": f"Limit test {i}.",
+            "context_translation": f"限制测试 {i}。",
+            "cloze_sentence": "Limit test _______.",
+        }
+        client.post("/api/v1/cards", json=card_data, headers=auth_headers)
+
+    # Request only 3 cards
+    response = client.get(
+        "/api/v1/cards/study?limit=3&strategy=hardest",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) <= 3

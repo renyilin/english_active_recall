@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SchoolIcon from '@mui/icons-material/School';
+import QuizIcon from '@mui/icons-material/Quiz';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -25,7 +26,13 @@ export default function Layout() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const currentTab = location.pathname === '/study' ? 1 : 0;
+  const getCurrentTab = () => {
+    if (location.pathname === '/study') return 1;
+    if (location.pathname === '/test') return 2;
+    return 0;
+  };
+
+  const currentTab = getCurrentTab();
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -49,9 +56,17 @@ export default function Layout() {
                 color="inherit"
                 startIcon={<SchoolIcon />}
                 onClick={() => navigate('/study')}
-                sx={{ mr: 2 }}
+                sx={{ mr: 1 }}
               >
                 Study
+              </Button>
+              <Button
+                color="inherit"
+                startIcon={<QuizIcon />}
+                onClick={() => navigate('/test')}
+                sx={{ mr: 2 }}
+              >
+                Test
               </Button>
             </>
           )}
@@ -75,12 +90,15 @@ export default function Layout() {
           <BottomNavigation
             value={currentTab}
             onChange={(_, newValue) => {
-              navigate(newValue === 0 ? '/' : '/study');
+              if (newValue === 0) navigate('/');
+              else if (newValue === 1) navigate('/study');
+              else if (newValue === 2) navigate('/test');
             }}
             showLabels
           >
             <BottomNavigationAction label="Library" icon={<MenuBookIcon />} />
             <BottomNavigationAction label="Study" icon={<SchoolIcon />} />
+            <BottomNavigationAction label="Test" icon={<QuizIcon />} />
           </BottomNavigation>
         </Paper>
       )}
