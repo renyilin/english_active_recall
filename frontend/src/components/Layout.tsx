@@ -40,7 +40,7 @@ export default function Layout() {
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            English Active Recall
+            Flash Cards
           </Typography>
           {!isMobile && (
             <>

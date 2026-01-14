@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -13,9 +13,11 @@ import {
   FormLabel,
   Paper,
   Stack,
+  IconButton,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { cardsApi } from '../services/api';
 import type { Card as CardType } from '../services/api';
@@ -59,14 +61,21 @@ export default function StudyPage() {
     }
   };
 
-  const handleNextCard = () => {
+  const handleNextCard = useCallback(() => {
     if (currentIndex < studyCards.length - 1) {
       setCurrentIndex((prev) => prev + 1);
       setIsFlipped(false);
     } else {
       setIsSessionComplete(true);
     }
-  };
+  }, [currentIndex, studyCards.length]);
+
+  const handlePreviousCard = useCallback(() => {
+    if (currentIndex > 0) {
+      setCurrentIndex((prev) => prev - 1);
+      setIsFlipped(false);
+    }
+  }, [currentIndex]);
 
   const handleStartNewSession = () => {
     setIsConfiguring(true);
@@ -75,6 +84,25 @@ export default function StudyPage() {
     setIsFlipped(false);
     setIsSessionComplete(false);
   };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle arrow keys if we're in active study session
+      if (isConfiguring || isLoading || isSessionComplete || studyCards.length === 0) {
+        return;
+      }
+
+      if (event.key === 'ArrowLeft') {
+        handlePreviousCard();
+      } else if (event.key === 'ArrowRight') {
+        handleNextCard();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handlePreviousCard, handleNextCard, isConfiguring, isLoading, isSessionComplete, studyCards.length]);
 
   const currentCard = studyCards[currentIndex];
 
@@ -245,28 +273,59 @@ export default function StudyPage() {
         />
       </Box>
 
-      {/* Flashcard */}
-      <FlashcardDisplay
-        card={currentCard}
-        isFlipped={isFlipped}
-        onFlip={() => setIsFlipped(!isFlipped)}
-      />
+      {/* Flashcard with arrow navigation */}
+      <Box sx={{ position: 'relative' }}>
+        {/* Left arrow */}
+        <IconButton
+          onClick={handlePreviousCard}
+          disabled={currentIndex === 0}
+          sx={{
+            position: 'absolute',
+            left: -60,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 10,
+            bgcolor: 'background.paper',
+            boxShadow: 2,
+            '&:hover': {
+              bgcolor: 'action.hover',
+            },
+            '&.Mui-disabled': {
+              bgcolor: 'action.disabledBackground',
+            },
+          }}
+          aria-label="Previous card"
+        >
+          <ArrowBackIcon />
+        </IconButton>
 
-      {/* Next button */}
-      {isFlipped && (
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
-          <Button
-            variant="contained"
-            size="large"
-            endIcon={<ArrowForwardIcon />}
-            onClick={handleNextCard}
-            fullWidth
-            sx={{ maxWidth: 300 }}
-          >
-            {currentIndex < studyCards.length - 1 ? 'Next Card' : 'Complete Session'}
-          </Button>
-        </Box>
-      )}
+        {/* Flashcard */}
+        <FlashcardDisplay
+          card={currentCard}
+          isFlipped={isFlipped}
+          onFlip={() => setIsFlipped(!isFlipped)}
+        />
+
+        {/* Right arrow */}
+        <IconButton
+          onClick={handleNextCard}
+          sx={{
+            position: 'absolute',
+            right: -60,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 10,
+            bgcolor: 'background.paper',
+            boxShadow: 2,
+            '&:hover': {
+              bgcolor: 'action.hover',
+            },
+          }}
+          aria-label="Next card"
+        >
+          <ArrowForwardIcon />
+        </IconButton>
+      </Box>
 
     </Box>
   );
