@@ -98,7 +98,7 @@ export default function LibraryPage() {
     {
       field: 'tags',
       headerName: 'Tags',
-      width: 200,
+      width: 150,
       sortable: false,
       renderCell: (params: GridRenderCellParams<CardType, CardType['tags']>) => (
         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center', height: '100%' }}>
