@@ -69,7 +69,7 @@ export const cardsApi = {
   list: (page = 1, pageSize = 20, cardType?: string) =>
     api.get('/cards', { params: { page, page_size: pageSize, card_type: cardType } }),
   getDue: (limit = 20) => api.get('/cards/due', { params: { limit } }),
-  getStudy: (limit = 30, strategy: 'hardest' | 'random' | 'tag' = 'hardest', tagIds?: string[]) =>
+  getStudy: (limit = 50, strategy: 'hardest' | 'random' | 'tag' = 'hardest', tagIds?: string[]) =>
     api.get('/cards/study', { params: { limit, strategy, tag_ids: tagIds } }),
   get: (id: string) => api.get(`/cards/${id}`),
   create: (data: CardCreate) => api.post('/cards', data),

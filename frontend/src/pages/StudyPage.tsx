@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Typography,
@@ -17,18 +17,17 @@ import {
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { cardsApi, tagsApi } from '../services/api';
-import type { Card as CardType, Tag } from '../services/api';
+import { cardsApi } from '../services/api';
+import type { Card as CardType } from '../services/api';
 import FlashcardDisplay from '../components/FlashcardDisplay';
 import TagSelector from '../components/TagSelector';
 
 export default function StudyPage() {
   // Phase 1: Configuration state
   const [isConfiguring, setIsConfiguring] = useState(true);
-  const [cardLimit, setCardLimit] = useState(30);
+  const [cardLimit, setCardLimit] = useState(50);
   const [strategy, setStrategy] = useState<'hardest' | 'random' | 'tag'>('hardest');
-  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
-  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   // Phase 2: Study session state
   const [studyCards, setStudyCards] = useState<CardType[]>([]);
@@ -37,28 +36,15 @@ export default function StudyPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSessionComplete, setIsSessionComplete] = useState(false);
 
-  // Fetch available tags for tag strategy
-  useEffect(() => {
-    const fetchTags = async () => {
-      try {
-        const response = await tagsApi.list();
-        setAvailableTags(response.data.items);
-      } catch (error) {
-        console.error('Failed to fetch tags:', error);
-      }
-    };
-    fetchTags();
-  }, []);
-
   const handleStartStudy = async () => {
-    if (strategy === 'tag' && selectedTags.length === 0) {
+    if (strategy === 'tag' && selectedTagIds.length === 0) {
       alert('Please select at least one tag');
       return;
     }
 
     setIsLoading(true);
     try {
-      const tagIds = strategy === 'tag' ? selectedTags.map(tag => tag.id) : undefined;
+      const tagIds = strategy === 'tag' ? selectedTagIds : undefined;
       const response = await cardsApi.getStudy(cardLimit, strategy, tagIds);
       setStudyCards(response.data);
       setCurrentIndex(0);
@@ -99,10 +85,6 @@ export default function StudyPage() {
         <Typography variant="h4" gutterBottom>
           Study Mode
         </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-          Practice flashcards without affecting your spaced repetition schedule
-        </Typography>
-
         <Paper elevation={2} sx={{ p: 3 }}>
           <Stack spacing={3}>
             {/* Card Limit */}
@@ -111,7 +93,7 @@ export default function StudyPage() {
               type="number"
               value={cardLimit}
               onChange={(e) => setCardLimit(Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))}
-              helperText="Select between 1 and 100 cards"
+              helperText="Default: 50 cards (1-100 range)"
               fullWidth
               inputProps={{ min: 1, max: 100 }}
             />
@@ -148,9 +130,8 @@ export default function StudyPage() {
                   Select tags to filter cards
                 </Typography>
                 <TagSelector
-                  availableTags={availableTags}
-                  selectedTags={selectedTags}
-                  onSelectionChange={setSelectedTags}
+                  selectedTagIds={selectedTagIds}
+                  onChange={setSelectedTagIds}
                 />
               </Box>
             )}
@@ -271,18 +252,6 @@ export default function StudyPage() {
         onFlip={() => setIsFlipped(!isFlipped)}
       />
 
-      {/* Tap to flip hint */}
-      {!isFlipped && (
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          align="center"
-          sx={{ mt: 2 }}
-        >
-          Tap card to reveal answer
-        </Typography>
-      )}
-
       {/* Next button */}
       {isFlipped && (
         <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
@@ -299,17 +268,6 @@ export default function StudyPage() {
         </Box>
       )}
 
-      {/* Exit study mode */}
-      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-        <Button
-          variant="text"
-          size="small"
-          onClick={handleStartNewSession}
-          color="inherit"
-        >
-          Exit Study Mode
-        </Button>
-      </Box>
     </Box>
   );
 }

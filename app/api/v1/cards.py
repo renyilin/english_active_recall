@@ -65,7 +65,7 @@ async def get_due_cards(
 async def get_study_cards(
     current_user: CurrentUser,
     session: Annotated[Session, Depends(get_session)],
-    limit: int = Query(default=30, ge=1, le=100),
+    limit: int = Query(default=50, ge=1, le=100),
     strategy: str = Query(default="hardest", pattern="^(hardest|random|tag)$"),
     tag_ids: list[UUID] | None = Query(default=None),
 ) -> list[CardRead]:
@@ -73,7 +73,7 @@ async def get_study_cards(
     Get cards for study mode (review without SRS updates).
 
     Selection strategies:
-    - **hardest**: Cards with shortest intervals and lowest ease factors
+    - **hardest**: Cards ordered by ease factor (lowest first, most difficult cards)
     - **random**: Random selection of cards
     - **tag**: Filter cards by selected tags (requires tag_ids parameter)
     """

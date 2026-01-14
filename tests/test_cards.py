@@ -175,7 +175,7 @@ def test_get_due_cards(client: TestClient, auth_headers: dict):
 
 
 def test_review_card_easy(client: TestClient, auth_headers: dict):
-    """Test reviewing a card with easy rating."""
+    """Test reviewing a card with remembered rating (formerly easy)."""
     # Create a card
     card_data = {
         "type": "phrase",
@@ -189,10 +189,10 @@ def test_review_card_easy(client: TestClient, auth_headers: dict):
     card_id = create_response.json()["id"]
     original_interval = create_response.json()["interval"]
 
-    # Review with easy rating
+    # Review with remembered rating
     response = client.post(
         f"/api/v1/cards/{card_id}/review",
-        json={"rating": "easy"},
+        json={"rating": "remembered"},
         headers=auth_headers,
     )
     assert response.status_code == 200
@@ -253,7 +253,7 @@ def test_review_card_not_found(client: TestClient, auth_headers: dict):
     fake_id = "00000000-0000-0000-0000-000000000000"
     response = client.post(
         f"/api/v1/cards/{fake_id}/review",
-        json={"rating": "easy"},
+        json={"rating": "remembered"},
         headers=auth_headers,
     )
     assert response.status_code == 404

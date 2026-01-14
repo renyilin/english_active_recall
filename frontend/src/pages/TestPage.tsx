@@ -125,18 +125,6 @@ export default function TestPage() {
         onFlip={() => setIsFlipped(!isFlipped)}
       />
 
-      {/* Tap to flip hint */}
-      {!isFlipped && (
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          align="center"
-          sx={{ mt: 2 }}
-        >
-          Tap card to reveal answer
-        </Typography>
-      )}
-
       {/* Grading buttons */}
       {isFlipped && (
         <Stack direction="row" spacing={2} sx={{ mt: 3 }} justifyContent="center">

@@ -121,7 +121,7 @@ class CardService:
     def get_study_cards(
         self,
         user_id: UUID,
-        limit: int = 30,
+        limit: int = 50,
         strategy: str = "hardest",
         tag_ids: list[UUID] | None = None,
     ) -> list[Card]:
@@ -130,7 +130,7 @@ class CardService:
 
         Args:
             user_id: The user's UUID
-            limit: Maximum number of cards to return (default 30)
+            limit: Maximum number of cards to return (default 50)
             strategy: Selection strategy - "hardest", "random", or "tag"
             tag_ids: List of tag UUIDs for tag-based selection
 
@@ -140,8 +140,8 @@ class CardService:
         statement = select(Card).where(Card.user_id == user_id)
 
         if strategy == "hardest":
-            # Low interval + low ease_factor = historically difficult cards
-            statement = statement.order_by(Card.interval, Card.ease_factor)
+            # Order by ease_factor (lowest first = most difficult cards)
+            statement = statement.order_by(Card.ease_factor, Card.interval)
         elif strategy == "random":
             statement = statement.order_by(func.random())
         elif strategy == "tag" and tag_ids:
