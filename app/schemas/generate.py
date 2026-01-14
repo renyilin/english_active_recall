@@ -19,6 +19,16 @@ class GenerateRequest(BaseModel):
     )
 
 
+
+class ExtractRequest(BaseModel):
+    """Request schema for text extraction."""
+
+    text: str = Field(min_length=1, max_length=5000, description="Raw text to extract from")
+    provider: AIProviderEnum | None = Field(
+        default=None, description="AI provider to use (defaults to configured provider)"
+    )
+
+
 class GenerateResponse(BaseModel):
     """Response schema for AI card generation."""
 
@@ -29,3 +39,9 @@ class GenerateResponse(BaseModel):
     context_translation: str = Field(description="Chinese translation of context sentence")
     cloze_sentence: str = Field(description="Context sentence with blank")
     tags: list[str] = Field(description="Suggested tags", default_factory=list)
+
+
+class ExtractResponse(BaseModel):
+    """Response schema for text extraction."""
+
+    candidates: list[str] = Field(description="List of extracted phrases or sentences")

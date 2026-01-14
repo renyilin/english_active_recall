@@ -232,8 +232,10 @@ export default function LibraryPage() {
       <SmartInputDialog
         open={smartInputOpen}
         onClose={() => setSmartInputOpen(false)}
-        onSuccess={() => {
-          setSmartInputOpen(false);
+        onSuccess={(closeDialog = true) => {
+          if (closeDialog) {
+            setSmartInputOpen(false);
+          }
           fetchCards();
         }}
       />

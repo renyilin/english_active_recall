@@ -91,6 +91,8 @@ export const tagsApi = {
 export const generateApi = {
   generate: (text: string, provider?: string) =>
     api.post('/generate', { text, provider }),
+  extract: (text: string, provider?: string) =>
+    api.post<{ candidates: string[] }>('/generate/extract', { text, provider }),
 };
 
 // Types

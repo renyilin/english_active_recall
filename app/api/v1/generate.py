@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, status
 
 from app.dependencies import CurrentUser
-from app.schemas.generate import GenerateRequest, GenerateResponse
-from app.services.ai_service import generate_card_data
+from app.schemas.generate import ExtractRequest, ExtractResponse, GenerateRequest, GenerateResponse
+from app.services.ai_service import extract_learning_items, generate_card_data
 
 router = APIRouter(prefix="/generate", tags=["AI Generation"])
 
@@ -28,6 +28,30 @@ async def generate(
         provider_value = request.provider.value if request.provider else None
         result = await generate_card_data(request.text, provider=provider_value)
         return GenerateResponse(**result)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"AI service error: {str(e)}",
+        )
+
+
+@router.post("/extract", response_model=ExtractResponse)
+async def extract(
+    request: ExtractRequest,
+    current_user: CurrentUser,
+) -> ExtractResponse:
+    """
+    Extract useful English phrases or sentences from larger text.
+    """
+    try:
+        provider_value = request.provider.value if request.provider else None
+        candidates = await extract_learning_items(request.text, provider=provider_value)
+        return ExtractResponse(candidates=candidates)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

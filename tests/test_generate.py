@@ -104,3 +104,22 @@ def test_generate_provider_not_configured(client: TestClient, auth_headers: dict
         )
         assert response.status_code == 503
         assert "not configured" in response.json()["detail"]
+
+
+def test_extract_learning_items(client: TestClient, auth_headers: dict):
+    """Test extracting learning items."""
+    mock_candidates = ["candidate 1", "candidate 2"]
+
+    with patch(
+        "app.api.v1.generate.extract_learning_items", new_callable=AsyncMock
+    ) as mock_extract:
+        mock_extract.return_value = mock_candidates
+
+        response = client.post(
+            "/api/v1/generate/extract",
+            json={"text": "context text here"},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["candidates"] == mock_candidates

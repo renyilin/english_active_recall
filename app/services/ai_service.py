@@ -31,6 +31,23 @@ Output format (strict JSON, no markdown):
   "tags": ["tag1"]
 }"""
 
+EXTRACT_SYSTEM_PROMPT = """You are an expert English language content analyzer.
+
+Instructions:
+1. Analyze the input text.
+2. Extract useful English phrases, idioms, or sentences for a learner to study.
+3. Ignore common simple words or irrelevant content.
+4. Limit to the top 20 most valuable items.
+5. maintain the original text for each item.
+
+Output format (strict JSON):
+{
+  "candidates": [
+    "extracted phrase 1",
+    "extracted sentence 2"
+  ]
+}"""
+
 
 class AIProvider(ABC):
     """Abstract base class for AI providers."""
@@ -38,6 +55,11 @@ class AIProvider(ABC):
     @abstractmethod
     async def generate(self, text: str) -> dict[str, Any]:
         """Generate card data from raw text input."""
+        pass
+
+    @abstractmethod
+    async def extract_candidates(self, text: str) -> list[str]:
+        """Extract learning candidates from text."""
         pass
 
 
@@ -75,6 +97,34 @@ class OpenAIProvider(AIProvider):
             content = data["choices"][0]["message"]["content"]
             return json.loads(content)
 
+    async def extract_candidates(self, text: str) -> list[str]:
+        """Extract candidates using OpenAI API."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                self.api_url,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": [
+                        {"role": "system", "content": EXTRACT_SYSTEM_PROMPT},
+                        {"role": "user", "content": text},
+                    ],
+                    "temperature": 0.5,
+                    "response_format": {"type": "json_object"},
+                },
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+            import json
+
+            content = data["choices"][0]["message"]["content"]
+            result = json.loads(content)
+            return result.get("candidates", [])
+
 
 class GeminiProvider(AIProvider):
     """Google Gemini API provider."""
@@ -111,6 +161,36 @@ class GeminiProvider(AIProvider):
             content = data["candidates"][0]["content"]["parts"][0]["text"]
             return json.loads(content)
 
+    async def extract_candidates(self, text: str) -> list[str]:
+        """Extract candidates using Gemini API."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.api_url}?key={self.api_key}",
+                headers={"Content-Type": "application/json"},
+                json={
+                    "contents": [
+                        {
+                            "parts": [
+                                {"text": f"{EXTRACT_SYSTEM_PROMPT}\n\nInput: {text}"},
+                            ]
+                        }
+                    ],
+                    "generationConfig": {
+                        "temperature": 0.5,
+                        "responseMimeType": "application/json",
+                    },
+                },
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+            import json
+
+            content = data["candidates"][0]["content"]["parts"][0]["text"]
+            result = json.loads(content)
+            return result.get("candidates", [])
+
+
 
 class AIServiceFactory:
     """Factory for creating AI provider instances."""
@@ -136,3 +216,9 @@ async def generate_card_data(text: str, provider: str | None = None) -> dict[str
     """Generate card data from raw text input using configured AI provider."""
     ai_provider = AIServiceFactory.create(provider)
     return await ai_provider.generate(text)
+
+
+async def extract_learning_items(text: str, provider: str | None = None) -> list[str]:
+    """Extract learning items from raw text input using configured AI provider."""
+    ai_provider = AIServiceFactory.create(provider)
+    return await ai_provider.extract_candidates(text)
