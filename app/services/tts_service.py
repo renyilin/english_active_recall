@@ -42,3 +42,35 @@ class TTSService:
             self.session.refresh(cache_entry)
 
         return cache_entry
+
+    def cleanup_old_cache_entries(self) -> None:
+        """Remove least recently used cache entries to stay under size limit."""
+        # Calculate total cache size
+        total_size_stmt = select(func.sum(AudioCache.file_size_bytes))
+        total_size = self.session.exec(total_size_stmt).one() or 0
+
+        if total_size <= settings.tts_cache_max_size_bytes:
+            return  # Under limit, no cleanup needed
+
+        # Calculate how much to remove
+        size_to_remove = total_size - settings.tts_cache_max_size_bytes
+        removed_size = 0
+
+        # Get oldest entries by last_accessed_at
+        stmt = select(AudioCache).order_by(AudioCache.last_accessed_at.asc())
+        old_entries = self.session.exec(stmt).all()
+
+        for entry in old_entries:
+            if removed_size >= size_to_remove:
+                break
+
+            # Delete file from filesystem
+            file_path = Path(entry.file_path)
+            if file_path.exists():
+                file_path.unlink()
+
+            # Delete database record
+            self.session.delete(entry)
+            removed_size += entry.file_size_bytes
+
+        self.session.commit()
