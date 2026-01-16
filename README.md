@@ -2,6 +2,14 @@
 
 AI-powered English learning app with Active Recall and Spaced Repetition.
 
+## Features
+
+- **Active Recall:** Test your knowledge with flashcards before seeing the answer
+- **Spaced Repetition:** Cards appear at optimal intervals based on your performance
+- **Cloud TTS:** High-quality audio pronunciation using OpenAI TTS API with intelligent server-side caching
+- **AI-Generated Content:** Create flashcards from text automatically
+- **Customizable Study:** Filter by tags, choose study strategies (hardest, random, or by tag)
+
 ## Local Development
 
 ### Backend
@@ -50,6 +58,22 @@ Frontend runs on: http://localhost:5173
 # From project root (with venv activated)
 pytest tests/ -v
 ```
+
+### Environment Variables
+
+Configure your `.env` file with the following variables:
+
+**Required:**
+- `DATABASE_URL`: PostgreSQL connection string
+- `SECRET_KEY`: Secret key for JWT tokens (generate with `openssl rand -hex 32`)
+- `REFRESH_SECRET_KEY`: Secret key for refresh tokens
+- `OPENAI_API_KEY`: OpenAI API key (required for TTS and AI generation)
+
+**Optional:**
+- `TTS_VOICE`: Voice for TTS (default: "alloy")
+- `TTS_MODEL`: TTS model (default: "tts-1-1106")
+- `TTS_CACHE_MAX_SIZE_BYTES`: Max cache size in bytes (default: 524288000 = 500MB)
+- `TTS_CACHE_DIR`: Directory for TTS audio cache (default: "./cache/tts")
 
 ## Docker Deployment (Self-Hosted)
 
