@@ -38,31 +38,42 @@ def test_get_cached_audio_hit(session: Session):
     """Test cache hit updates last_accessed_at and access_count."""
     tts_service = TTSService(session)
 
-    # Create cache entry
-    cache_key = "test_key_123"
-    cache_entry = AudioCache(
-        id=uuid4(),
-        cache_key=cache_key,
-        text="Test text",
-        voice="alloy",
-        model="tts-1-1106",
-        file_size_bytes=1024,
-        file_path="cache/tts/test.mp3",
-        created_at=datetime.utcnow() - timedelta(hours=1),
-        last_accessed_at=datetime.utcnow() - timedelta(hours=1),
-        access_count=1,
-    )
-    session.add(cache_entry)
-    session.commit()
+    # Create temp file
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
+        tmp.write(b"dummy audio")
+        tmp_path = tmp.name
 
-    # Get cached audio
-    result = tts_service.get_cached_audio(cache_key)
+    try:
+        # Create cache entry
+        cache_key = "test_key_123"
+        cache_entry = AudioCache(
+            id=uuid4(),
+            cache_key=cache_key,
+            text="Test text",
+            voice="alloy",
+            model="tts-1-1106",
+            file_size_bytes=1024,
+            file_path=tmp_path,
+            created_at=datetime.utcnow() - timedelta(hours=1),
+            last_accessed_at=datetime.utcnow() - timedelta(hours=1),
+            access_count=1,
+        )
 
-    assert result is not None
-    assert result.cache_key == cache_key
-    assert result.access_count == 2
-    # last_accessed_at should be updated (within 5 seconds of now)
-    assert (datetime.utcnow() - result.last_accessed_at).total_seconds() < 5
+        session.add(cache_entry)
+        session.commit()
+
+        # Get cached audio
+        result = tts_service.get_cached_audio(cache_key)
+
+        assert result is not None
+        assert result.cache_key == cache_key
+        assert result.access_count == 2
+        # last_accessed_at should be updated (within 5 seconds of now)
+        assert (datetime.utcnow() - result.last_accessed_at).total_seconds() < 5
+    finally:
+        if Path(tmp_path).exists():
+            Path(tmp_path).unlink()
 
 
 def test_get_cached_audio_miss(session: Session):
@@ -199,3 +210,34 @@ def test_get_audio_end_to_end(session: Session):
             assert cache_entry.access_count == 2
 
         settings.tts_cache_dir = original_cache_dir
+
+
+def test_get_cached_audio_file_missing(session: Session):
+    """Test cache entry is removed if file is missing."""
+    tts_service = TTSService(session)
+
+    # Create cache entry with non-existent file
+    cache_key = "missing_file_key"
+    cache_entry = AudioCache(
+        id=uuid4(),
+        cache_key=cache_key,
+        text="Test text",
+        voice="alloy",
+        model="tts-1-1106",
+        file_size_bytes=1024,
+        file_path="/tmp/nonexistent_file.mp3",
+        created_at=datetime.utcnow(),
+        last_accessed_at=datetime.utcnow(),
+        access_count=1,
+    )
+    session.add(cache_entry)
+    session.commit()
+
+    # Get cached audio - should return None because file is missing
+    result = tts_service.get_cached_audio(cache_key)
+
+    assert result is None
+
+    # Verify entry was removed from DB
+    db_entry = session.exec(select(AudioCache).where(AudioCache.cache_key == cache_key)).first()
+    assert db_entry is None

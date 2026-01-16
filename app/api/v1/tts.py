@@ -13,7 +13,7 @@ from app.services.tts_service import TTSService
 router = APIRouter(prefix="/tts", tags=["TTS"])
 
 
-@router.post("", response_class=FileResonse)
+@router.post("", response_class=FileResponse)
 async def generate_speech(
     request: TTSRequest,
     current_user: CurrentUser,

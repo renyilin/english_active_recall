@@ -34,6 +34,12 @@ class TTSService:
         cache_entry = self.session.exec(statement).first()
 
         if cache_entry:
+            # Check if file exists
+            if not Path(cache_entry.file_path).exists():
+                self.session.delete(cache_entry)
+                self.session.commit()
+                return None
+
             # Update access metadata
             cache_entry.last_accessed_at = datetime.utcnow()
             cache_entry.access_count += 1
