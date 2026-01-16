@@ -74,3 +74,53 @@ class TTSService:
             removed_size += entry.file_size_bytes
 
         self.session.commit()
+
+    def generate_and_cache_audio(self, text: str, voice: str, model: str) -> AudioCache:
+        """Generate audio via OpenAI TTS API and cache it."""
+        # Run cleanup before adding new entry
+        self.cleanup_old_cache_entries()
+
+        # Generate cache key and file path
+        cache_key = self.generate_cache_key(text, voice, model)
+        file_path = self.cache_dir / f"{cache_key}.mp3"
+
+        # Call OpenAI TTS API
+        response = self.client.audio.speech.create(
+            model=model,
+            voice=voice,
+            input=text,
+        )
+
+        # Save audio to file
+        audio_data = response.content
+        file_path.write_bytes(audio_data)
+
+        # Create cache entry
+        cache_entry = AudioCache(
+            cache_key=cache_key,
+            text=text,
+            voice=voice,
+            model=model,
+            file_size_bytes=len(audio_data),
+            file_path=str(file_path),
+        )
+        self.session.add(cache_entry)
+        self.session.commit()
+        self.session.refresh(cache_entry)
+
+        return cache_entry
+
+    def get_audio(self, text: str, voice: str | None = None, model: str | None = None) -> AudioCache:
+        """Get audio for text (from cache or generate new)."""
+        voice = voice or settings.tts_voice
+        model = model or settings.tts_model
+
+        # Check cache first
+        cache_key = self.generate_cache_key(text, voice, model)
+        cache_entry = self.get_cached_audio(cache_key)
+
+        if cache_entry:
+            return cache_entry
+
+        # Cache miss: generate and cache
+        return self.generate_and_cache_audio(text, voice, model)

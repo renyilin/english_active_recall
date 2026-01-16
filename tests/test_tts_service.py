@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 import tempfile
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 from sqlmodel import Session, select
 
@@ -125,3 +126,76 @@ def test_cleanup_old_cache_entries(session: Session):
         # Restore settings
         settings.tts_cache_dir = original_cache_dir
         settings.tts_cache_max_size_bytes = original_max_size
+
+
+def test_generate_and_cache_audio(session: Session):
+    """Test generating audio via OpenAI and caching it."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        from app.core.config import get_settings
+        settings = get_settings()
+        original_cache_dir = settings.tts_cache_dir
+        settings.tts_cache_dir = tmpdir
+
+        tts_service = TTSService(session)
+
+        # Mock OpenAI API response
+        mock_audio_data = b"fake_mp3_audio_data"
+        mock_response = Mock()
+        mock_response.content = mock_audio_data
+
+        with patch.object(tts_service.client.audio.speech, 'create', return_value=mock_response):
+            text = "Hello world"
+            voice = "alloy"
+            model = "tts-1-1106"
+
+            result = tts_service.generate_and_cache_audio(text, voice, model)
+
+            # Verify cache entry created
+            assert result.text == text
+            assert result.voice == voice
+            assert result.model == model
+            assert result.file_size_bytes == len(mock_audio_data)
+            assert result.access_count == 1
+
+            # Verify file exists
+            file_path = Path(result.file_path)
+            assert file_path.exists()
+            assert file_path.read_bytes() == mock_audio_data
+
+        settings.tts_cache_dir = original_cache_dir
+
+
+def test_get_audio_end_to_end(session: Session):
+    """Test complete flow: cache miss, generate, cache hit."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        from app.core.config import get_settings
+        settings = get_settings()
+        original_cache_dir = settings.tts_cache_dir
+        settings.tts_cache_dir = tmpdir
+
+        tts_service = TTSService(session)
+
+        mock_audio_data = b"fake_audio"
+        mock_response = Mock()
+        mock_response.content = mock_audio_data
+
+        with patch.object(tts_service.client.audio.speech, 'create', return_value=mock_response) as mock_create:
+            text = "Test sentence"
+
+            # First call: cache miss, should call OpenAI
+            audio1 = tts_service.get_audio(text)
+            assert audio1 is not None
+            assert mock_create.call_count == 1
+
+            # Second call: cache hit, should NOT call OpenAI
+            audio2 = tts_service.get_audio(text)
+            assert audio2 is not None
+            assert mock_create.call_count == 1  # Still 1, not called again
+
+            # Access count incremented
+            cache_entry = session.exec(
+                select(AudioCache).where(AudioCache.text == text)
+            ).first()
+            assert cache_entry.access_count == 2
+
+        settings.tts_cache_dir = original_cache_dir
