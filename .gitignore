@@ -36,6 +36,9 @@ build/
 alembic/versions/*.py
 !alembic/versions/.gitkeep
 
+# TTS audio cache
+cache/
+
 # OS
 .DS_Store
 Thumbs.db

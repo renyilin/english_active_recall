@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     gemini_api_key: str | None = None
 
+    # TTS Configuration
+    tts_voice: str = "alloy"  # OpenAI TTS voice
+    tts_model: str = "tts-1-1106"
+    tts_cache_max_size_bytes: int = 524_288_000  # 500 MB
+    tts_cache_dir: str = "./cache/tts"
+
 
 @lru_cache
 def get_settings() -> Settings:
