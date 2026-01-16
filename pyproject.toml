@@ -25,6 +25,9 @@ dependencies = [
 
     # HTTP Client (for AI integration in Phase 2)
     "httpx>=0.28.0",
+
+    # OpenAI TTS
+    "openai>=1.57.0",
 ]
 
 [project.optional-dependencies]
