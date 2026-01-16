@@ -33,6 +33,7 @@ async def generate_speech(
             model=request.model,
         )
     except Exception as e:
+        print(f"TTS Error: {str(e)}")  # Debug: Print error to console
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate audio: {str(e)}",
