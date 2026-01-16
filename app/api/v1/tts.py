@@ -13,7 +13,7 @@ from app.services.tts_service import TTSService
 router = APIRouter(prefix="/tts", tags=["TTS"])
 
 
-@router.post("", response_class=FileResponse)
+@router.post("", response_class=FileResonse)
 async def generate_speech(
     request: TTSRequest,
     current_user: CurrentUser,
@@ -25,6 +25,8 @@ async def generate_speech(
     Returns MP3 audio file. Uses cached audio if available, otherwise generates via OpenAI TTS.
     """
     tts_service = TTSService(session)
+
+    print(f"TTS called with text: {request.text}")  # Debug: Print error to console
 
     try:
         cache_entry = tts_service.get_audio(
@@ -38,6 +40,8 @@ async def generate_speech(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate audio: {str(e)}",
         )
+    
+    print(f"TTS success 2")  # Debug: Print error to console
 
     file_path = Path(cache_entry.file_path)
     if not file_path.exists():
@@ -45,6 +49,8 @@ async def generate_speech(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Audio file not found",
         )
+
+    print(f"TTS success with text: {request.text}")  # Debug: Print error to console
 
     return FileResponse(
         path=file_path,
