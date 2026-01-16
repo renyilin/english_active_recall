@@ -10,6 +10,8 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    volumes:
+      - ~/tts:./cache/tts
     environment:
       # Database - Neon PostgreSQL
       - DATABASE_URL=${DATABASE_URL}
@@ -29,6 +31,11 @@ services:
       - AI_PROVIDER=${AI_PROVIDER:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      # TTS Configuration
+      - TTS_VOICE=${TTS_VOICE:-alloy}
+      - TTS_MODEL=${TTS_MODEL:-tts-1-1106}
+      - TTS_CACHE_MAX_SIZE_BYTES=${TTS_CACHE_MAX_SIZE_BYTES:-524288000}
+      - TTS_CACHE_DIR=${TTS_CACHE_DIR:-./cache/tts}
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')" ]
       interval: 30s
