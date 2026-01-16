@@ -11,7 +11,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ~/tts:./cache/tts
+      - ~/tts:/cache/tts
     environment:
       # Database - Neon PostgreSQL
       - DATABASE_URL=${DATABASE_URL}
