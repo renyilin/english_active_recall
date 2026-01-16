@@ -11,7 +11,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ${HOME}/english_active_recall/cache/tts:/app/cache/tts
+      # need to assign permission to ~/tts folder (sudo chmod -R 777 ~/tts)
+      - ~/tts:/app/cache/tts
     environment:
       # Database - Neon PostgreSQL
       - DATABASE_URL=${DATABASE_URL}
