@@ -1,7 +1,8 @@
 import { Box, Typography, Card as MuiCard, CardContent, IconButton, Chip } from '@mui/material';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import type { Card } from '../services/api';
+import { ttsApi } from '../services/api';
 
 interface FlashcardDisplayProps {
   card: Card;
@@ -14,6 +15,9 @@ export default function FlashcardDisplay({ card, isFlipped, onFlip }: FlashcardD
     return localStorage.getItem('autoPlayAudio') === 'true';
   });
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioCacheRef = useRef<Map<string, string>>(new Map()); // text -> blob URL
+
   const toggleAutoPlay = (e: React.MouseEvent) => {
     e.stopPropagation();
     const newValue = !autoPlayEnabled;
@@ -21,27 +25,49 @@ export default function FlashcardDisplay({ card, isFlipped, onFlip }: FlashcardD
     localStorage.setItem('autoPlayAudio', String(newValue));
   };
 
-  const speakText = useCallback((text: string) => {
-    // Cancel any ongoing speech first
-    window.speechSynthesis.cancel();
+  const speakText = useCallback(async (text: string) => {
+    try {
+      // Stop any currently playing audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.9;
-    window.speechSynthesis.speak(utterance);
+      // Check cache first
+      let audioUrl = audioCacheRef.current.get(text);
+
+      if (!audioUrl) {
+        // Fetch from API
+        const blob = await ttsApi.generateAudio(text);
+        audioUrl = URL.createObjectURL(blob);
+        audioCacheRef.current.set(text, audioUrl);
+      }
+
+      // Play audio
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      await audio.play();
+    } catch (error) {
+      console.error('Failed to play audio:', error);
+      // Fallback to Web Speech API if TTS fails
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
+    }
+  }, []);
+
+  // Cleanup blob URLs on unmount
+  useEffect(() => {
+    return () => {
+      audioCacheRef.current.forEach((url) => URL.revokeObjectURL(url));
+      audioCacheRef.current.clear();
+    };
   }, []);
 
   // Handle auto-play when flipped
   useEffect(() => {
-    // Cancel speech when component unmounts or card changes
-    return () => {
-      window.speechSynthesis.cancel();
-    };
-  }, [card]);
-
-  useEffect(() => {
     if (isFlipped && autoPlayEnabled) {
-      // Small timeout to ensure transition looks natural before audio starts
       const timer = setTimeout(() => {
         speakText(card.context_sentence);
       }, 300);
