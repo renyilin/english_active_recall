@@ -32,6 +32,7 @@ COPY alembic.ini ./
 
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash appuser && \
+    mkdir -p /app/cache/tts && \
     chown -R appuser:appuser /app
 USER appuser
 
