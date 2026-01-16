@@ -25,6 +25,18 @@ CREATE TABLE "cards" (
 	"created_at" timestamp NOT NULL,
 	"updated_at" timestamp NOT NULL
 );
+CREATE TABLE "audio_cache" (
+	"id" uuid PRIMARY KEY,
+	"cache_key" varchar(64) NOT NULL,
+	"text" varchar(1000) NOT NULL,
+	"voice" varchar(50) NOT NULL,
+	"model" varchar(50) NOT NULL,
+	"file_size_bytes" integer NOT NULL,
+	"file_path" varchar(255) NOT NULL,
+	"created_at" timestamp NOT NULL,
+	"last_accessed_at" timestamp NOT NULL,
+	"access_count" integer NOT NULL
+);
 CREATE TABLE "tags" (
 	"id" uuid PRIMARY KEY,
 	"user_id" uuid NOT NULL,
@@ -48,6 +60,10 @@ CREATE UNIQUE INDEX "card_tags_pkey" ON "card_tags" ("card_id","tag_id");
 CREATE UNIQUE INDEX "cards_pkey" ON "cards" ("id");
 CREATE INDEX "ix_cards_id" ON "cards" ("id");
 CREATE INDEX "ix_cards_user_id" ON "cards" ("user_id");
+CREATE UNIQUE INDEX "audio_cache_pkey" ON "audio_cache" ("id");
+CREATE INDEX "ix_audio_cache_id" ON "audio_cache" ("id");
+CREATE UNIQUE INDEX "ix_audio_cache_cache_key" ON "audio_cache" ("cache_key");
+CREATE INDEX "ix_audio_cache_last_accessed_at" ON "audio_cache" ("last_accessed_at");
 CREATE INDEX "ix_tags_id" ON "tags" ("id");
 CREATE INDEX "ix_tags_name" ON "tags" ("name");
 CREATE INDEX "ix_tags_user_id" ON "tags" ("user_id");
