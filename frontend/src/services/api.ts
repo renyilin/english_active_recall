@@ -95,6 +95,17 @@ export const generateApi = {
     api.post<{ candidates: string[] }>('/generate/extract', { text, provider }),
 };
 
+// TTS API
+export const ttsApi = {
+  generateAudio: async (text: string): Promise<Blob> => {
+    const response = await api.post('/tts',
+      { text },
+      { responseType: 'blob' }
+    );
+    return response.data;
+  },
+};
+
 // Types
 export interface Tag {
   id: string;
