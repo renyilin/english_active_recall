@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -23,7 +23,8 @@ import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
-import { cardsApi } from '../services/api';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import { cardsApi, ttsApi } from '../services/api';
 import type { Card as CardType, CardListResponse } from '../services/api';
 import SmartInputDialog from '../components/SmartInputDialog';
 import EditCardDialog from '../components/EditCardDialog';
@@ -31,6 +32,8 @@ import EditCardDialog from '../components/EditCardDialog';
 export default function LibraryPage() {
   const [cards, setCards] = useState<CardType[]>([]);
   const [total, setTotal] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioCacheRef = useRef<Map<string, string>>(new Map());
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [typeFilter, setTypeFilter] = useState<string>('');
@@ -71,6 +74,46 @@ export default function LibraryPage() {
       console.error('Failed to delete card:', error);
     }
   };
+
+  const handlePlayAudio = useCallback(async (text: string) => {
+    try {
+      // Stop any currently playing audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+
+      // Check cache first
+      let audioUrl = audioCacheRef.current.get(text);
+
+      if (!audioUrl) {
+        // Fetch from API
+        const blob = await ttsApi.generateAudio(text);
+        audioUrl = URL.createObjectURL(blob);
+        audioCacheRef.current.set(text, audioUrl);
+      }
+
+      // Play audio
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      await audio.play();
+    } catch (error) {
+      console.error('Failed to play audio:', error);
+      // Fallback to Web Speech API if TTS fails
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
+    }
+  }, []);
+
+  // Cleanup blob URLs on unmount
+  useEffect(() => {
+    return () => {
+      audioCacheRef.current.forEach((url) => URL.revokeObjectURL(url));
+      audioCacheRef.current.clear();
+    };
+  }, []);
 
   const filteredCards = searchText
     ? cards.filter(
@@ -124,10 +167,13 @@ export default function LibraryPage() {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 100,
+      width: 120,
       sortable: false,
       renderCell: (params: GridRenderCellParams<CardType>) => (
         <>
+          <IconButton size="small" onClick={() => handlePlayAudio(params.row.target_text)} color="primary">
+            <PlayArrowIcon fontSize="small" />
+          </IconButton>
           <IconButton size="small" onClick={() => setEditCard(params.row)}>
             <EditIcon fontSize="small" />
           </IconButton>
