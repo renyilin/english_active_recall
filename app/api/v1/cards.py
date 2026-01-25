@@ -31,6 +31,7 @@ async def list_cards(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     card_type: CardType | None = None,
+    q: str | None = Query(default=None, description="Search query for text or meaning"),
 ) -> CardList:
     """List all cards for the current user with pagination."""
     card_service = CardService(session)
@@ -40,6 +41,7 @@ async def list_cards(
         page=page,
         page_size=page_size,
         card_type=type_value,
+        search_query=q,
     )
     return CardList(
         items=[CardRead.model_validate(card) for card in cards],

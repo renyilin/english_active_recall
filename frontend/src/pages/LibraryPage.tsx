@@ -28,6 +28,7 @@ import { cardsApi, ttsApi } from '../services/api';
 import type { Card as CardType, CardListResponse } from '../services/api';
 import SmartInputDialog from '../components/SmartInputDialog';
 import EditCardDialog from '../components/EditCardDialog';
+import { useDebounce } from '../hooks/useDebounce';
 
 export default function LibraryPage() {
   const [cards, setCards] = useState<CardType[]>([]);
@@ -38,6 +39,7 @@ export default function LibraryPage() {
   const [pageSize, setPageSize] = useState(20);
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [searchText, setSearchText] = useState('');
+  const debouncedSearchText = useDebounce(searchText, 500);
   const [isLoading, setIsLoading] = useState(false);
   const [smartInputOpen, setSmartInputOpen] = useState(false);
   const [editCard, setEditCard] = useState<CardType | null>(null);
@@ -49,7 +51,7 @@ export default function LibraryPage() {
   const fetchCards = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await cardsApi.list(page + 1, pageSize, typeFilter || undefined);
+      const response = await cardsApi.list(page + 1, pageSize, typeFilter || undefined, debouncedSearchText || undefined);
       const data: CardListResponse = response.data;
       setCards(data.items);
       setTotal(data.total);
@@ -58,11 +60,16 @@ export default function LibraryPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, pageSize, typeFilter]);
+  }, [page, pageSize, typeFilter, debouncedSearchText]);
 
   useEffect(() => {
     fetchCards();
   }, [fetchCards]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [typeFilter, debouncedSearchText]);
 
   const handleDelete = async () => {
     if (!deleteCard) return;
@@ -115,13 +122,7 @@ export default function LibraryPage() {
     };
   }, []);
 
-  const filteredCards = searchText
-    ? cards.filter(
-      (card) =>
-        card.target_text.toLowerCase().includes(searchText.toLowerCase()) ||
-        card.target_meaning.includes(searchText)
-    )
-    : cards;
+  const filteredCards = cards;
 
   const columns: GridColDef<CardType>[] = [
     {

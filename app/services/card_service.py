@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from sqlmodel import Session, func, select
+from sqlmodel import Session, func, select, or_
 
 from app.models.card import Card
 from app.models.tag import CardTag, Tag
@@ -53,6 +53,7 @@ class CardService:
         page_size: int = 20,
         card_type: str | None = None,
         tag_id: UUID | None = None,
+        search_query: str | None = None,
     ) -> tuple[list[Card], int]:
         """Get all cards for a user with pagination."""
         statement = select(Card).where(Card.user_id == user_id)
@@ -60,10 +61,24 @@ class CardService:
         if card_type:
             statement = statement.where(Card.type == card_type)
 
+        if search_query:
+            search_filter = or_(
+                Card.target_text.contains(search_query),
+                Card.target_meaning.contains(search_query)
+            )
+            statement = statement.where(search_filter)
+
         # Get total count
         count_statement = select(func.count()).select_from(Card).where(Card.user_id == user_id)
         if card_type:
             count_statement = count_statement.where(Card.type == card_type)
+        if search_query:
+            count_statement = count_statement.where(
+                or_(
+                    Card.target_text.contains(search_query),
+                    Card.target_meaning.contains(search_query)
+                )
+            )
         total = self.session.exec(count_statement).one()
 
         # Apply pagination

@@ -66,8 +66,8 @@ export const authApi = {
 
 // Cards API
 export const cardsApi = {
-  list: (page = 1, pageSize = 20, cardType?: string) =>
-    api.get('/cards', { params: { page, page_size: pageSize, card_type: cardType } }),
+  list: (page = 1, pageSize = 20, cardType?: string, search?: string) =>
+    api.get('/cards', { params: { page, page_size: pageSize, card_type: cardType, q: search } }),
   getDue: (limit = 20) => api.get('/cards/due', { params: { limit } }),
   getStudy: (limit = 50, strategy: 'hardest' | 'random' | 'tag' = 'hardest', tagIds?: string[]) =>
     api.get('/cards/study', { params: { limit, strategy, tag_ids: tagIds } }),
