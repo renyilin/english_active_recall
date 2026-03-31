@@ -135,3 +135,6 @@ Once the server is running, visit:
 ### Neon.tech
 
 - URL: https://neon.tech
+
+### Deploy
+run deploy.sh to deploy

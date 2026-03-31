@@ -1,171 +1,143 @@
-# Project Design Document: English Active Recall App
+# English Active Recall
 
-## 1. Executive Summary
-A personal, high-efficiency language learning tool focused on **Active Recall** and **Speaking**. The app minimizes the friction of creating flashcards using **AI Smart Input** and maximizes retention using a **Spaced Repetition System (SRS)**.
+AI-powered English learning app with Active Recall and Spaced Repetition.
 
-* **Core Philosophy:** Reduce data entry time -> Increase speaking practice time.
-* **Target Platform:** Web Application (Mobile-responsive).
-* **Deployment:** Free Tier Cloud Stack (Vercel, Render, Neon/Supabase).
+## Features
 
----
+- **Active Recall:** Test your knowledge with flashcards before seeing the answer
+- **Spaced Repetition:** Cards appear at optimal intervals based on your performance
+- **Cloud TTS:** High-quality audio pronunciation using OpenAI TTS API with intelligent server-side caching
+- **AI-Generated Content:** Create flashcards from text automatically
+- **Customizable Study:** Filter by tags, choose study strategies (hardest, random, or by tag)
 
-## 2. Functional Specifications
+## Project Design
+refer to @/docs/project_design.md
 
-### A. User Management
-* **Auth System:** Simple Email/Password registration.
-* **Security:** JWT (JSON Web Tokens) for session management.
-* **Data Isolation:** All data queries must be scoped to the authenticated `user_id`.
+## Local Development
 
-### B. "Smart Input" (AI-Powered)
-Instead of manual typing, the user inputs a raw phrase or sentence. The system calls an AI API (OpenAI/Gemini) to generate structured learning data.
-* **Input:** Raw text (e.g., "call it a day").
-* **Output:** Auto-filled fields for Meaning, Context Sentence, Translation, and Type (Phrase/Sentence).
-* **User Control:** User reviews and edits the AI output before saving.
+### Backend
 
-### C. Library Management (Table View)
-A dashboard to manage the knowledge base.
-* **View:** Data Table (Desktop) / List View (Mobile).
-* **Search:** Real-time filtering by English text or Chinese meaning.
-* **Filters:** By Type (Sentence vs. Phrase), By Status (New/Learning/Mastered).
-* **Interactions:** Expand row to see full context; Quick-edit; Delete.
+```bash
+# Navigate to project root
+cd /path/to/english_active_recall
 
-### D. Test Mode (The Flashcard)
-The app serves cards based on the SRS schedule.
-* **Mode 1: Sentence Mode** (For full sentences)
-    * *Front:* Chinese Meaning.
-    * *Task:* Speak the full English sentence.
-* **Mode 2: Phrase Mode** (For idioms/words)
-    * *Front:* Example sentence with a `_______` blank + Chinese Hint.
-    * *Task:* Speak the missing phrase to complete the context.
-* **Feedback:**
-    * Flip card to reveal answer.
-    * **Audio Button:** Text-to-Speech playback.
-    * **Grading:** User selects [Forgot] / [Hard] / [Remembered].
+# Activate virtual environment
+source .venv/bin/activate
 
-### E. Preview Mode (The Flashcard)
-At first, it provides options:
-1. how many cards want to learn (50 cards by default); 
-2. study mode: randomly study; hardest cards (by default; order by ease factor); study by tag.
+# Install dependencies (first time)
+pip install -e ".[dev]"
 
-Then users can go through all flashcard that meets the conditions. The difference from testing mode is that it doesn't need feedback.
+# Copy and configure environment
+cp .env.example .env
+# Edit .env with your database URL and secrets
 
----
+# Run database migrations
+alembic upgrade head
 
-## 3. Algorithm & Logic
-
-### Spaced Repetition (Simplified SM-2)
-Determines when a card should be reviewed next based on user feedback.
-
-| Rating | Logic | Interval Calc | Next Review |
-| :--- | :--- | :--- | :--- |
-| **Forgot** (Red) | Reset progress. | `Interval = 0` | < 10 min |
-| **Hard** (Yellow) | Small increase. | `Interval = Current * 1.2` | e.g., 1d -> 1.2d |
-| **Easy** (Green) | Large increase. | `Interval = Current * 2.5` | e.g., 1d -> 2.5d |
-
----
-
-## 4. AI System Design
-
-### System Prompt
-This prompt ensures the AI returns strict JSON for the app to parse.
-
-**Role:** You are an intelligent data processor for an English learning app.
-**Instructions:**
-1. Analyze input: Is it a "phrase" or "sentence"?
-2. Generate `target_meaning` (Simplified Chinese).
-3. Generate `context_sentence`:
-   - If Phrase: Create a natural example sentence using it.
-   - If Sentence: Use input as-is (correct grammar).
-4. Generate `context_translation`: Translate the full example sentence (Simplified Chinese).
-5. Generate `cloze_sentence`: Replace target in context with `_______`.
-6. Output JSON only.
-
-### JSON Structure
-```json
-{
-  "type": "phrase",
-  "target_text": "call it a day",
-  "target_meaning": "收工；今天就做到这里",
-  "context_sentence": "I'm really tired, let's call it a day.",
-  "context_translation": "我很累了，咱们收工吧。",
-  "cloze_sentence": "I'm really tired, let's _______."
-}
+# Start backend server
+uvicorn app.main:app --reload
 ```
 
+Backend runs on: http://localhost:8000
 
-## 5. Technical Architecture
+### Frontend
 
-### Tech Stack
+```bash
+# In a separate terminal, navigate to frontend
+cd /path/to/english_active_recall/frontend
 
-| Component | Technology | Selection Rationale |
-| --- | --- | --- |
-| **Frontend** | **React** (Vite) | Fast, rich ecosystem. |
-| **UI Library** | **MUI** or **Shadcn/UI** | Pre-built Data Grid and Card components. |
-| **Backend** | **Python (FastAPI)** | High performance, native AI integration, auto-docs. |
-| **Database** | **PostgreSQL** | Relational data integrity. |
-| **ORM** | **SQLModel** | Modern Pythonic interaction with SQL. |
-| **AI Providers** | **OpenAI** + **Gemini** | Factory pattern to switch providers. |
+# Install dependencies (first time)
+npm install
 
----### Database Schema (SQLModel/Python)
-
-``` Python
-
-    import uuid
-    from datetime import datetime
-    from sqlmodel import SQLModel, Field
-    
-    class User(SQLModel, table=True):
-        id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-        email: str = Field(unique=True, index=True)
-        hashed_password: str
-    
-    class Card(SQLModel, table=True):
-        id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-        user_id: uuid.UUID = Field(foreign_key="user.id")
-        
-        # Content
-        type: str                 # "phrase" or "sentence"
-        target_text: str          # "call it a day"
-        target_meaning: str       # "收工..."
-        context_sentence: str     # "Let's call it a day"
-        context_translation: str  # "咱们收工吧"
-        cloze_sentence: str       # "Let's _______"
-        
-        # SRS Metadata
-        interval: int = Field(default=0)      # Days
-        ease_factor: float = Field(default=2.5)
-        next_review: datetime = Field(default_factory=datetime.utcnow)
+# Start development server
+npm run dev
 ```
 
-## 6. Deployment Plan (Free Tier)
+Frontend runs on: http://localhost:5173
 
-| Component | Service | Tier |
-| --- | --- | --- |
-| **Database** | **Neon.tech** or **Supabase** | Free Serverless Postgres (500MB+). |
-| **Backend** | **Render.com** | Free Web Service (Spins down on idle). |
-| **Frontend** | **Vercel** | Free Hobby Tier (Git Integration). |
+### Run Tests
 
-Export to Sheets
+```bash
+# From project root (with venv activated)
+pytest tests/ -v
+```
 
-### Development Roadmap
+### Environment Variables
 
-1.  **Phase 1 (Backend Core):** Setup FastAPI, Postgres, and User Auth (JWT).
-    
-2.  **Phase 2 (AI Integration):** Implement `POST /generate` with the JSON prompt.
-    
-3.  **Phase 3 (Frontend Library):** React setup, Login screen, and Data Table.
-    
-4.  **Phase 4 (Study Mode):** Flashcard UI and SRS logic implementation.
+Configure your `.env` file with the following variables:
 
+**Required:**
+- `DATABASE_URL`: PostgreSQL connection string
+- `SECRET_KEY`: Secret key for JWT tokens (generate with `openssl rand -hex 32`)
+- `REFRESH_SECRET_KEY`: Secret key for refresh tokens
+- `OPENAI_API_KEY`: OpenAI API key (required for TTS and AI generation)
 
+**Optional:**
+- `TTS_VOICE`: Voice for TTS (default: "alloy")
+- `TTS_MODEL`: TTS model (default: "tts-1-1106")
+- `TTS_CACHE_MAX_SIZE_BYTES`: Max cache size in bytes (default: 524288000 = 500MB)
+- `TTS_CACHE_DIR`: Directory for TTS audio cache (default: "./cache/tts")
 
+## Docker Deployment (Self-Hosted)
 
+### Prerequisites
+- Docker and Docker Compose installed
+- PostgreSQL database on [Neon.tech](https://neon.tech) (free tier)
 
+### Setup
 
+```bash
+# 1. Copy and configure environment
+cp .env.example .env
 
+# 2. Edit .env with your settings:
+#    - DATABASE_URL: Your Neon.tech connection string
+#    - SECRET_KEY: Generate with `openssl rand -hex 32`
+#    - REFRESH_SECRET_KEY: Generate another secret
+#    - VITE_API_URL: Your server's public IP/domain (for production)
 
+# 3. Build and run containers
+docker-compose up --build -d
 
+# 4. Run database migrations (first time only)
+docker-compose exec backend alembic upgrade head
 
+# 5. View logs
+docker-compose logs -f
+```
 
+### Access
+- **Frontend**: http://localhost (port 80)
+- **Backend API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/api/v1/docs
 
+### Useful Commands
 
+```bash
+# Stop containers
+docker-compose down
+
+# Rebuild after code changes
+docker-compose up --build -d
+
+# View container status
+docker-compose ps
+
+# Access backend shell
+docker-compose exec backend bash
+```
+
+## API Documentation
+
+Once the server is running, visit:
+- Swagger UI: http://localhost:8000/api/v1/docs
+- ReDoc: http://localhost:8000/api/v1/redoc
+
+## Database in Production
+
+### Neon.tech
+
+- URL: https://neon.tech
+
+### Deploy
+run deploy.sh to deploy
