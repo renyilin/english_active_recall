@@ -13,53 +13,28 @@ AI-powered English learning app with Active Recall and Spaced Repetition.
 ## Project Design
 refer to @/docs/project_design.md
 
-## Local Development
-
-### Backend
+## Make Commands
 
 ```bash
-# Navigate to project root
-cd /path/to/english_active_recall
+make backend    # Run backend dev server (localhost:8000)
+make frontend   # Run frontend dev server (localhost:5173)
+make all        # Run both in parallel
+make build      # Docker build (no cache)
+make deploy     # Deploy to production
+make test       # Run pytest
+```
 
-# Activate virtual environment
+### First-Time Setup
+
+```bash
+# Backend
 source .venv/bin/activate
-
-# Install dependencies (first time)
 pip install -e ".[dev]"
-
-# Copy and configure environment
-cp .env.example .env
-# Edit .env with your database URL and secrets
-
-# Run database migrations
+cp .env.example .env  # Edit with your database URL and secrets
 alembic upgrade head
 
-# Start backend server
-uvicorn app.main:app --reload
-```
-
-Backend runs on: http://localhost:8000
-
-### Frontend
-
-```bash
-# In a separate terminal, navigate to frontend
-cd /path/to/english_active_recall/frontend
-
-# Install dependencies (first time)
-npm install
-
-# Start development server
-npm run dev
-```
-
-Frontend runs on: http://localhost:5173
-
-### Run Tests
-
-```bash
-# From project root (with venv activated)
-pytest tests/ -v
+# Frontend
+cd frontend && npm install
 ```
 
 ### Environment Variables
@@ -114,17 +89,10 @@ docker-compose logs -f
 ### Useful Commands
 
 ```bash
-# Stop containers
-docker-compose down
-
-# Rebuild after code changes
-docker-compose up --build -d
-
-# View container status
-docker-compose ps
-
-# Access backend shell
-docker-compose exec backend bash
+docker-compose down              # Stop containers
+docker-compose up --build -d     # Rebuild after code changes
+docker-compose ps                # View container status
+docker-compose exec backend bash # Access backend shell
 ```
 
 ## API Documentation
@@ -138,6 +106,3 @@ Once the server is running, visit:
 ### Neon.tech
 
 - URL: https://neon.tech
-
-### Deploy
-run deploy.sh to deploy
