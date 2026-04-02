@@ -106,6 +106,16 @@ export const ttsApi = {
   },
 };
 
+// Export API
+export const exportApi = {
+  exportCards: async (): Promise<Blob> => {
+    const response = await api.get('/export/cards', {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+};
+
 // Types
 export interface Tag {
   id: string;

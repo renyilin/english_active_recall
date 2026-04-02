@@ -1,4 +1,5 @@
 
+import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -17,7 +18,9 @@ import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SchoolIcon from '@mui/icons-material/School';
 import QuizIcon from '@mui/icons-material/Quiz';
 import LogoutIcon from '@mui/icons-material/Logout';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { useAuth } from '../contexts/AuthContext';
+import { exportApi } from '../services/api';
 
 export default function Layout() {
   const { logout, user } = useAuth();
@@ -33,6 +36,26 @@ export default function Layout() {
   };
 
   const currentTab = getCurrentTab();
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const blob = await exportApi.exportCards();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'flashcards_export.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -73,6 +96,14 @@ export default function Layout() {
           <Typography variant="body2" sx={{ mr: 2 }}>
             {user?.email}
           </Typography>
+          <IconButton
+            color="inherit"
+            onClick={handleExport}
+            disabled={exporting}
+            title="Export to Excel"
+          >
+            <FileDownloadIcon />
+          </IconButton>
           <IconButton color="inherit" onClick={logout} title="Logout">
             <LogoutIcon />
           </IconButton>

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import auth, cards, generate, health, tags, tts, users
+from app.api.v1 import auth, cards, export, generate, health, tags, tts, users
 
 api_router = APIRouter()
 
@@ -12,4 +12,5 @@ api_router.include_router(cards.router)
 api_router.include_router(tags.router)
 api_router.include_router(generate.router)
 api_router.include_router(tts.router)
+api_router.include_router(export.router)
 
