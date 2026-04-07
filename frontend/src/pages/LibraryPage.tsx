@@ -138,7 +138,16 @@ export default function LibraryPage() {
         />
       ),
     },
-    { field: 'target_text', headerName: 'English', flex: 1, minWidth: 150 },
+    {
+      field: 'target_text',
+      headerName: 'English',
+      flex: 1,
+      minWidth: 150,
+      renderCell: (params: GridRenderCellParams<CardType, string>) =>
+        params.row.type === 'phrase' && params.row.context_sentence
+          ? <span><strong>{params.value}</strong> - {params.row.context_sentence}</span>
+          : params.value,
+    },
     { field: 'target_meaning', headerName: 'Meaning', flex: 1, minWidth: 150 },
     {
       field: 'tags',
@@ -173,7 +182,7 @@ export default function LibraryPage() {
       sortable: false,
       renderCell: (params: GridRenderCellParams<CardType>) => (
         <>
-          <IconButton size="small" onClick={() => handlePlayAudio(params.row.target_text)} color="primary">
+          <IconButton size="small" onClick={() => handlePlayAudio(params.row.type === 'phrase' && params.row.context_sentence ? params.row.context_sentence : params.row.target_text)} color="primary">
             <PlayArrowIcon fontSize="small" />
           </IconButton>
           <IconButton size="small" onClick={() => setEditCard(params.row)}>
@@ -236,18 +245,17 @@ export default function LibraryPage() {
                     {card.interval}d
                   </Typography>
                 </Box>
-                <Typography variant="subtitle1" fontWeight="bold">
-                  {card.target_text}
+                <Typography variant="subtitle1">
+                  {card.type === 'phrase' && card.context_sentence
+                    ? <><strong>{card.target_text}</strong> - {card.context_sentence}</>
+                    : <strong>{card.target_text}</strong>}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {card.target_meaning}
                 </Typography>
-                <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
-                  {card.context_sentence}
-                </Typography>
               </CardContent>
               <CardActions>
-                <IconButton size="small" onClick={() => handlePlayAudio(card.target_text)} color="primary">
+                <IconButton size="small" onClick={() => handlePlayAudio(card.type === 'phrase' && card.context_sentence ? card.context_sentence : card.target_text)} color="primary">
                   <PlayArrowIcon />
                 </IconButton>
                 <IconButton size="small" onClick={() => setEditCard(card)}>
