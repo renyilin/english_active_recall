@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
 import {
+  Box,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
   Button,
+  IconButton,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   Alert,
+  CircularProgress,
 } from '@mui/material';
-import { cardsApi } from '../services/api';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import { cardsApi, generateApi } from '../services/api';
 import type { Card, CardUpdate } from '../services/api';
 import TagSelector from './TagSelector';
 
@@ -40,6 +44,7 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
   });
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -86,6 +91,34 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleAIGenerate = async () => {
+    if (!formData.target_text.trim()) return;
+
+    setIsGenerating(true);
+    setError('');
+
+    try {
+      const input = formData.target_meaning.trim()
+        ? `${formData.target_text.trim()} (${formData.target_meaning.trim()})`
+        : formData.target_text.trim();
+      const response = await generateApi.generate(input);
+      const data = response.data;
+      setFormData((prev) => ({
+        ...prev,
+        type: data.type || prev.type,
+        target_meaning: data.target_meaning || prev.target_meaning,
+        context_sentence: data.context_sentence || prev.context_sentence,
+        context_translation: data.context_translation || prev.context_translation,
+        cloze_sentence: data.cloze_sentence || prev.cloze_sentence,
+      }));
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to generate card data');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <Dialog open={!!card} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>Edit Card</DialogTitle>
@@ -117,14 +150,22 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
           size="small"
         />
 
-        <TextField
-          fullWidth
-          label="Meaning (Chinese)"
-          value={formData.target_meaning}
-          onChange={(e) => updateField('target_meaning', e.target.value)}
-          margin="normal"
-          size="small"
-        />
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 2 }}>
+          <TextField
+            fullWidth
+            label="Meaning (Chinese)"
+            value={formData.target_meaning}
+            onChange={(e) => updateField('target_meaning', e.target.value)}
+            size="small"
+          />
+          <IconButton
+            onClick={handleAIGenerate}
+            disabled={!formData.target_text.trim() || isGenerating}
+            color="primary"
+          >
+            {isGenerating ? <CircularProgress size={20} /> : <AutoAwesomeIcon />}
+          </IconButton>
+        </Box>
 
         <TextField
           fullWidth

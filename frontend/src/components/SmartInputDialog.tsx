@@ -6,6 +6,7 @@ import {
   DialogActions,
   TextField,
   Button,
+  IconButton,
   Box,
   CircularProgress,
   Alert,
@@ -211,6 +212,34 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
     }
   };
 
+  const handleRegenerate = async () => {
+    if (!editedData?.target_text?.trim()) return;
+
+    setIsGenerating(true);
+    setError('');
+
+    try {
+      const input = editedData.target_meaning?.trim()
+        ? `${editedData.target_text.trim()} (${editedData.target_meaning.trim()})`
+        : editedData.target_text.trim();
+      const response = await generateApi.generate(input);
+      const data: GeneratedData = response.data;
+      setEditedData((prev) => prev ? {
+        ...prev,
+        type: data.type || prev.type,
+        target_meaning: data.target_meaning || prev.target_meaning,
+        context_sentence: data.context_sentence || prev.context_sentence,
+        context_translation: data.context_translation || prev.context_translation,
+        cloze_sentence: data.cloze_sentence || prev.cloze_sentence,
+      } : prev);
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to generate card data');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleBack = () => {
     if (generatedData) {
       // If we are reviewing generated data
@@ -354,14 +383,22 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
               size="small"
             />
 
-            <TextField
-              fullWidth
-              label="Meaning (Chinese)"
-              value={editedData?.target_meaning || ''}
-              onChange={(e) => updateField('target_meaning', e.target.value)}
-              margin="normal"
-              size="small"
-            />
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 2 }}>
+              <TextField
+                fullWidth
+                label="Meaning (Chinese)"
+                value={editedData?.target_meaning || ''}
+                onChange={(e) => updateField('target_meaning', e.target.value)}
+                size="small"
+              />
+              <IconButton
+                onClick={handleRegenerate}
+                disabled={!editedData?.target_text?.trim() || isGenerating}
+                color="primary"
+              >
+                {isGenerating ? <CircularProgress size={20} /> : <AutoAwesomeIcon />}
+              </IconButton>
+            </Box>
 
             <TagSelector
               selectedTagIds={selectedTagIds}
