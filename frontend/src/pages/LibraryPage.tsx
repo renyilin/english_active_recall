@@ -17,6 +17,7 @@ import {
   Card,
   CardContent,
   CardActions,
+  TablePagination,
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
@@ -246,6 +247,9 @@ export default function LibraryPage() {
                 </Typography>
               </CardContent>
               <CardActions>
+                <IconButton size="small" onClick={() => handlePlayAudio(card.target_text)} color="primary">
+                  <PlayArrowIcon />
+                </IconButton>
                 <IconButton size="small" onClick={() => setEditCard(card)}>
                   <EditIcon />
                 </IconButton>
@@ -255,6 +259,27 @@ export default function LibraryPage() {
               </CardActions>
             </Card>
           ))}
+          <TablePagination
+            component="div"
+            count={total}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            rowsPerPage={pageSize}
+            onRowsPerPageChange={(e) => {
+              setPageSize(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+            rowsPerPageOptions={[10, 20, 50, 100, 200]}
+            sx={{
+              '& .MuiTablePagination-toolbar': {
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+              },
+              '& .MuiTablePagination-actions': {
+                order: -1,
+              },
+            }}
+          />
         </Box>
       ) : (
         // Desktop Data Grid
@@ -266,7 +291,7 @@ export default function LibraryPage() {
             setPage(model.page);
             setPageSize(model.pageSize);
           }}
-          pageSizeOptions={[10, 20, 50]}
+          pageSizeOptions={[10, 20, 50, 100, 200]}
           rowCount={total}
           paginationMode="server"
           loading={isLoading}
