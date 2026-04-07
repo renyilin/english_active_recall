@@ -45,6 +45,7 @@ export default function LibraryPage() {
   const [smartInputOpen, setSmartInputOpen] = useState(false);
   const [editCard, setEditCard] = useState<CardType | null>(null);
   const [deleteCard, setDeleteCard] = useState<CardType | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -123,6 +124,46 @@ export default function LibraryPage() {
     };
   }, []);
 
+  const getCardAudioText = (card: CardType) =>
+    card.type === 'phrase' && card.context_sentence ? card.context_sentence : card.target_text;
+
+  // Reset selection when cards change
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [cards]);
+
+  // Keyboard navigation: up/down to select, space to play
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if focus is on an input, dialog, or select
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if ((e.target as HTMLElement).closest('[role="dialog"]')) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex((prev) => Math.min(prev + 1, cards.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex((prev) => Math.max(prev - 1, 0));
+      } else if (e.key === ' ' && selectedIndex >= 0 && selectedIndex < cards.length) {
+        e.preventDefault();
+        handlePlayAudio(getCardAudioText(cards[selectedIndex]));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cards, selectedIndex, handlePlayAudio]);
+
+  // Auto-scroll selected card into view
+  useEffect(() => {
+    if (selectedIndex >= 0) {
+      const el = document.querySelector(`[data-card-index="${selectedIndex}"]`);
+      el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [selectedIndex]);
+
   const filteredCards = cards;
 
   const columns: GridColDef<CardType>[] = [
@@ -182,7 +223,7 @@ export default function LibraryPage() {
       sortable: false,
       renderCell: (params: GridRenderCellParams<CardType>) => (
         <>
-          <IconButton size="small" onClick={() => handlePlayAudio(params.row.type === 'phrase' && params.row.context_sentence ? params.row.context_sentence : params.row.target_text)} color="primary">
+          <IconButton size="small" onClick={() => handlePlayAudio(getCardAudioText(params.row))} color="primary">
             <PlayArrowIcon fontSize="small" />
           </IconButton>
           <IconButton size="small" onClick={() => setEditCard(params.row)}>
@@ -232,8 +273,17 @@ export default function LibraryPage() {
       {isMobile ? (
         // Mobile List View
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {filteredCards.map((card) => (
-            <Card key={card.id}>
+          {filteredCards.map((card, index) => (
+            <Card
+              key={card.id}
+              data-card-index={index}
+              onClick={() => setSelectedIndex(index)}
+              sx={{
+                cursor: 'pointer',
+                outline: selectedIndex === index ? '2px solid' : 'none',
+                outlineColor: 'primary.main',
+              }}
+            >
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Chip
@@ -255,7 +305,7 @@ export default function LibraryPage() {
                 </Typography>
               </CardContent>
               <CardActions>
-                <IconButton size="small" onClick={() => handlePlayAudio(card.type === 'phrase' && card.context_sentence ? card.context_sentence : card.target_text)} color="primary">
+                <IconButton size="small" onClick={() => handlePlayAudio(getCardAudioText(card))} color="primary">
                   <PlayArrowIcon />
                 </IconButton>
                 <IconButton size="small" onClick={() => setEditCard(card)}>
@@ -305,6 +355,14 @@ export default function LibraryPage() {
           loading={isLoading}
           autoHeight
           disableRowSelectionOnClick
+          onRowClick={(params) => {
+            const index = filteredCards.findIndex((c) => c.id === params.row.id);
+            setSelectedIndex(index);
+          }}
+          getRowClassName={(params) => {
+            const index = filteredCards.findIndex((c) => c.id === params.row.id);
+            return index === selectedIndex ? 'Mui-selected' : '';
+          }}
         />
       )}
 
