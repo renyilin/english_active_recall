@@ -62,7 +62,7 @@ export default function Layout() {
       {/* Top App Bar */}
       <AppBar position="static">
         <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" component="div" sx={{ mr: 2 }}>
             Flash Cards
           </Typography>
           {!isMobile && (
@@ -93,6 +93,7 @@ export default function Layout() {
               </Button>
             </>
           )}
+          <Box sx={{ flexGrow: 1 }} />
           <Typography variant="body2" sx={{ mr: 2 }}>
             {user?.email}
           </Typography>
