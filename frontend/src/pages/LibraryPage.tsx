@@ -327,7 +327,7 @@ export default function LibraryPage() {
               setPageSize(parseInt(e.target.value, 10));
               setPage(0);
             }}
-            rowsPerPageOptions={[10, 20, 50, 100, 200]}
+            rowsPerPageOptions={[20, 50, 100]}
             sx={{
               '& .MuiTablePagination-toolbar': {
                 flexWrap: 'wrap',
@@ -349,7 +349,7 @@ export default function LibraryPage() {
             setPage(model.page);
             setPageSize(model.pageSize);
           }}
-          pageSizeOptions={[10, 20, 50, 100, 200]}
+          pageSizeOptions={[20, 50, 100]}
           rowCount={total}
           paginationMode="server"
           loading={isLoading}
