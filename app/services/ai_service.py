@@ -18,7 +18,8 @@ Instructions:
 4. Generate context_translation: Translate the full example sentence (Simplified Chinese).
 5. Generate cloze_sentence: Replace target in context with "_______".
 6. Generate tags: Select the most relevant tag ONLY from this list: ['sport', 'travel', 'life', 'health', 'shopping', 'food', 'people', 'work', 'weather', 'tech']. Return empty list if none apply.
-7. Output JSON only.
+7. If the type is "phrase", keep target_text in sentence-style casing and do not capitalize the first letter unless capitalization is necessary for a proper noun, acronym, or other valid reason.
+8. Output JSON only.
 
 Output format (strict JSON, no markdown):
 {

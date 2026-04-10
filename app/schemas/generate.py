@@ -13,7 +13,11 @@ class AIProviderEnum(str, Enum):
 class GenerateRequest(BaseModel):
     """Request schema for AI card generation."""
 
-    text: str = Field(min_length=1, max_length=500, description="Raw phrase or sentence to process")
+    text: str = Field(
+        min_length=1,
+        max_length=5000,
+        description="Raw phrase or sentence to process",
+    )
     provider: AIProviderEnum | None = Field(
         default=None, description="AI provider to use (defaults to configured provider)"
     )

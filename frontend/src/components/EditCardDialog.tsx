@@ -16,6 +16,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { cardsApi, generateApi } from '../services/api';
 import type { Card, CardUpdate } from '../services/api';
 import TagSelector from './TagSelector';
@@ -80,8 +81,7 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
       await cardsApi.update(card.id, updateData);
       onSuccess();
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } };
-      setError(error.response?.data?.detail || 'Failed to update card');
+      setError(getApiErrorMessage(err, 'Failed to update card'));
     } finally {
       setIsSaving(false);
     }
@@ -91,6 +91,53 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const getApiErrorMessage = (err: unknown, fallback: string) => {
+    const response = err as {
+      response?: {
+        data?: {
+          detail?: string | Array<{ msg?: string }>;
+        };
+      };
+    };
+    const detail = response.response?.data?.detail;
+    if (Array.isArray(detail)) {
+      const messages = detail
+        .map((item) => item.msg)
+        .filter((msg): msg is string => !!msg);
+      return messages.length > 0 ? messages.join('; ') : fallback;
+    }
+    return detail || fallback;
+  };
+
+  const buildGenerationPrompt = () => {
+    const targetText = formData.target_text.trim();
+    const targetMeaning = formData.target_meaning.trim();
+    const contextSentence = formData.context_sentence.trim();
+
+    const lines = [
+      `Generate flashcard data for this English item.`,
+      `target_text: ${targetText}`,
+    ];
+
+    if (targetMeaning) {
+      lines.push(`target_meaning: ${targetMeaning}`);
+    }
+
+    if (contextSentence) {
+      lines.push(`context_sentence: ${contextSentence}`);
+    }
+
+    lines.push(
+      'Rules:',
+      '- If target_meaning is provided, use it as the primary meaning hint and generate the other fields from target_text + target_meaning.',
+      '- If context_sentence is provided, generate context_translation and cloze_sentence from target_text, target_meaning, and context_sentence.',
+      '- If the type is phrase, keep target_text in sentence-style casing and do not capitalize the first letter unless capitalization is necessary for a proper noun, acronym, or other valid reason.',
+      '- Return JSON only.',
+    );
+
+    return lines.join('\n');
+  };
+
   const handleAIGenerate = async () => {
     if (!formData.target_text.trim()) return;
 
@@ -98,10 +145,7 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
     setError('');
 
     try {
-      const input = formData.target_meaning.trim()
-        ? `${formData.target_text.trim()} (${formData.target_meaning.trim()})`
-        : formData.target_text.trim();
-      const response = await generateApi.generate(input);
+      const response = await generateApi.generate(buildGenerationPrompt());
       const data = response.data;
       setFormData((prev) => ({
         ...prev,
@@ -112,8 +156,7 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
         cloze_sentence: data.cloze_sentence || prev.cloze_sentence,
       }));
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } };
-      setError(error.response?.data?.detail || 'Failed to generate card data');
+      setError(getApiErrorMessage(err, 'Failed to generate card data'));
     } finally {
       setIsGenerating(false);
     }
@@ -167,15 +210,25 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
           </IconButton>
         </Box>
 
-        <TextField
-          fullWidth
-          label="Context Sentence"
-          value={formData.context_sentence}
-          onChange={(e) => updateField('context_sentence', e.target.value)}
-          margin="normal"
-          size="small"
-          multiline
-        />
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mt: 2 }}>
+          <TextField
+            fullWidth
+            label="Context Sentence"
+            value={formData.context_sentence}
+            onChange={(e) => updateField('context_sentence', e.target.value)}
+            size="small"
+            multiline
+          />
+          <IconButton
+            aria-label="clear context sentence"
+            onClick={() => updateField('context_sentence', '')}
+            disabled={!formData.context_sentence.trim()}
+            color="error"
+            sx={{ mt: 0.5 }}
+          >
+            <DeleteIcon />
+          </IconButton>
+        </Box>
 
         <TextField
           fullWidth
@@ -210,4 +263,3 @@ export default function EditCardDialog({ card, onClose, onSuccess }: EditCardDia
     </Dialog>
   );
 }
-

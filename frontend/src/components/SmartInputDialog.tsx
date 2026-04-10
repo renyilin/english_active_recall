@@ -50,6 +50,24 @@ interface GeneratedData {
 
 type Mode = 'single' | 'batch';
 
+const getApiErrorMessage = (err: unknown, fallback: string) => {
+  const response = err as {
+    response?: {
+      data?: {
+        detail?: string | Array<{ msg?: string }>;
+      };
+    };
+  };
+  const detail = response.response?.data?.detail;
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => item.msg)
+      .filter((msg): msg is string => !!msg);
+    return messages.length > 0 ? messages.join('; ') : fallback;
+  }
+  return detail || fallback;
+};
+
 export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInputDialogProps) {
   // Mode State
   const [mode, setMode] = useState<Mode>('single');
@@ -90,8 +108,7 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
       setCandidates(response.data.candidates);
       setProcessedIndices(new Set());
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } };
-      setError(error.response?.data?.detail || 'Failed to extract items');
+      setError(getApiErrorMessage(err, 'Failed to extract items'));
     } finally {
       setIsExtracting(false);
     }
@@ -149,8 +166,7 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
         }
       }
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } };
-      setError(error.response?.data?.detail || 'Failed to generate card data');
+      setError(getApiErrorMessage(err, 'Failed to generate card data'));
     } finally {
       setIsGenerating(false);
     }
@@ -185,8 +201,7 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
         onSuccess(true);
       }
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } };
-      setError(error.response?.data?.detail || 'Failed to save card');
+      setError(getApiErrorMessage(err, 'Failed to save card'));
     } finally {
       setIsSaving(false);
     }
@@ -234,6 +249,7 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
       'Rules:',
       '- If target_meaning is provided, use it as the primary meaning hint and generate the other fields from target_text + target_meaning.',
       '- If context_sentence is provided, generate context_translation and cloze_sentence from target_text, target_meaning, and context_sentence.',
+      '- If the type is phrase, keep target_text in sentence-style casing and do not capitalize the first letter unless capitalization is necessary for a proper noun, acronym, or other valid reason.',
       '- Return JSON only.',
     );
 
