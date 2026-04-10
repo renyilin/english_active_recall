@@ -4,6 +4,7 @@ import {
   Typography,
   Button,
   TextField,
+  InputAdornment,
   ToggleButton,
   ToggleButtonGroup,
   IconButton,
@@ -182,14 +183,14 @@ export default function LibraryPage() {
     {
       field: 'target_text',
       headerName: 'English',
-      flex: 1,
-      minWidth: 150,
+      flex: 1.4,
+      minWidth: 220,
       renderCell: (params: GridRenderCellParams<CardType, string>) =>
         params.row.type === 'phrase' && params.row.context_sentence
           ? <span><strong>{params.value}</strong> - {params.row.context_sentence}</span>
           : params.value,
     },
-    { field: 'target_meaning', headerName: 'Meaning', flex: 1, minWidth: 150 },
+    { field: 'target_meaning', headerName: 'Meaning', flex: 0.7, minWidth: 120 },
     {
       field: 'tags',
       headerName: 'Tags',
@@ -257,6 +258,20 @@ export default function LibraryPage() {
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           sx={{ minWidth: 250 }}
+          InputProps={{
+            endAdornment: searchText ? (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="clear search"
+                  edge="end"
+                  size="small"
+                  onClick={() => setSearchText('')}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ) : null,
+          }}
         />
         <ToggleButtonGroup
           value={typeFilter}

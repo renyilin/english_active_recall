@@ -178,4 +178,3 @@ export interface CardListResponse {
 }
 
 export default api;
-

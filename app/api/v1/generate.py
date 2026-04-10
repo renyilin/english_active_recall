@@ -1,7 +1,12 @@
 from fastapi import APIRouter, HTTPException, status
 
 from app.dependencies import CurrentUser
-from app.schemas.generate import ExtractRequest, ExtractResponse, GenerateRequest, GenerateResponse
+from app.schemas.generate import (
+    ExtractRequest,
+    ExtractResponse,
+    GenerateRequest,
+    GenerateResponse,
+)
 from app.services.ai_service import extract_learning_items, generate_card_data
 
 router = APIRouter(prefix="/generate", tags=["AI Generation"])
