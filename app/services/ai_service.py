@@ -32,6 +32,32 @@ Output format (strict JSON, no markdown):
   "tags": ["tag1"]
 }"""
 
+RECOMMEND_SYSTEM_PROMPT = """You are an expert English language tutor.
+
+Instructions:
+1. Given a source phrase or sentence, generate exactly 5 related but different phrases or sentences that would be useful for an English learner.
+2. "Related" means thematically similar, commonly used in the same context, or naturally associated (e.g., collocations, synonyms, related idioms, phrases from the same topic).
+3. Do NOT generate any phrase or sentence that appears in the "existing" list provided.
+4. For each recommendation, provide full structured data.
+5. Output JSON only.
+
+Output format (strict JSON, no markdown):
+{
+  "recommendations": [
+    {
+      "type": "phrase" or "sentence",
+      "target_text": "the recommended phrase or sentence",
+      "target_meaning": "Chinese meaning (Simplified Chinese)",
+      "context_sentence": "Natural example sentence using it",
+      "context_translation": "Chinese translation of context_sentence",
+      "cloze_sentence": "Context sentence with _______ replacing target",
+      "tags": ["tag1"]
+    }
+  ]
+}
+
+Tag options (select from this list only, or empty): ['sport', 'travel', 'life', 'health', 'shopping', 'food', 'people', 'work', 'weather', 'tech']"""
+
 EXTRACT_SYSTEM_PROMPT = """You are an expert English language content analyzer.
 
 Instructions:
@@ -61,6 +87,11 @@ class AIProvider(ABC):
     @abstractmethod
     async def extract_candidates(self, text: str) -> list[str]:
         """Extract learning candidates from text."""
+        pass
+
+    @abstractmethod
+    async def recommend(self, text: str, existing_texts: list[str]) -> list[dict[str, Any]]:
+        """Recommend related phrases/sentences not in existing library."""
         pass
 
 
@@ -125,6 +156,38 @@ class OpenAIProvider(AIProvider):
             content = data["choices"][0]["message"]["content"]
             result = json.loads(content)
             return result.get("candidates", [])
+
+
+    async def recommend(self, text: str, existing_texts: list[str]) -> list[dict[str, Any]]:
+        """Recommend related phrases using OpenAI API."""
+        user_content = f"Source: {text}\n\nExisting (do not repeat these):\n" + "\n".join(
+            f"- {t}" for t in existing_texts
+        )
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                self.api_url,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": [
+                        {"role": "system", "content": RECOMMEND_SYSTEM_PROMPT},
+                        {"role": "user", "content": user_content},
+                    ],
+                    "temperature": 0.8,
+                    "response_format": {"type": "json_object"},
+                },
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+            import json
+
+            content = data["choices"][0]["message"]["content"]
+            result = json.loads(content)
+            return result.get("recommendations", [])
 
 
 class GeminiProvider(AIProvider):
@@ -193,6 +256,39 @@ class GeminiProvider(AIProvider):
 
 
 
+    async def recommend(self, text: str, existing_texts: list[str]) -> list[dict[str, Any]]:
+        """Recommend related phrases using Gemini API."""
+        user_content = f"Source: {text}\n\nExisting (do not repeat these):\n" + "\n".join(
+            f"- {t}" for t in existing_texts
+        )
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.api_url}?key={self.api_key}",
+                headers={"Content-Type": "application/json"},
+                json={
+                    "contents": [
+                        {
+                            "parts": [
+                                {"text": f"{RECOMMEND_SYSTEM_PROMPT}\n\n{user_content}"},
+                            ]
+                        }
+                    ],
+                    "generationConfig": {
+                        "temperature": 0.8,
+                        "responseMimeType": "application/json",
+                    },
+                },
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+            import json
+
+            content = data["candidates"][0]["content"]["parts"][0]["text"]
+            result = json.loads(content)
+            return result.get("recommendations", [])
+
+
 class AIServiceFactory:
     """Factory for creating AI provider instances."""
 
@@ -223,3 +319,11 @@ async def extract_learning_items(text: str, provider: str | None = None) -> list
     """Extract learning items from raw text input using configured AI provider."""
     ai_provider = AIServiceFactory.create(provider)
     return await ai_provider.extract_candidates(text)
+
+
+async def recommend_related_items(
+    text: str, existing_texts: list[str], provider: str | None = None
+) -> list[dict[str, Any]]:
+    """Recommend related phrases/sentences using configured AI provider."""
+    ai_provider = AIServiceFactory.create(provider)
+    return await ai_provider.recommend(text, existing_texts)

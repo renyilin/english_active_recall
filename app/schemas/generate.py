@@ -49,3 +49,23 @@ class ExtractResponse(BaseModel):
     """Response schema for text extraction."""
 
     candidates: list[str] = Field(description="List of extracted phrases or sentences")
+
+
+class RecommendRequest(BaseModel):
+    """Request schema for recommending related phrases."""
+
+    text: str = Field(min_length=1, max_length=500, description="Source phrase or sentence")
+    existing_texts: list[str] = Field(
+        default_factory=list, description="Existing library texts to exclude"
+    )
+    provider: AIProviderEnum | None = Field(
+        default=None, description="AI provider to use (defaults to configured provider)"
+    )
+
+
+class RecommendResponse(BaseModel):
+    """Response schema for recommendations."""
+
+    recommendations: list[GenerateResponse] = Field(
+        description="List of recommended phrases/sentences"
+    )
