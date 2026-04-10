@@ -93,7 +93,23 @@ export const generateApi = {
     api.post('/generate', { text, provider }),
   extract: (text: string, provider?: string) =>
     api.post<{ candidates: string[] }>('/generate/extract', { text, provider }),
+  recommend: (text: string, existingTexts: string[], provider?: string) =>
+    api.post<{ recommendations: GenerateResponse[] }>('/generate/recommend', {
+      text,
+      existing_texts: existingTexts,
+      provider,
+    }),
 };
+
+export interface GenerateResponse {
+  type: 'phrase' | 'sentence';
+  target_text: string;
+  target_meaning: string;
+  context_sentence: string;
+  context_translation: string;
+  cloze_sentence: string;
+  tags: string[];
+}
 
 // TTS API
 export const ttsApi = {

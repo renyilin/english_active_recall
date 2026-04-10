@@ -25,10 +25,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
 import { cardsApi, ttsApi } from '../services/api';
 import type { Card as CardType, CardListResponse } from '../services/api';
 import SmartInputDialog from '../components/SmartInputDialog';
 import EditCardDialog from '../components/EditCardDialog';
+import RecommendDialog from '../components/RecommendDialog';
 import { useDebounce } from '../hooks/useDebounce';
 
 export default function LibraryPage() {
@@ -45,6 +47,7 @@ export default function LibraryPage() {
   const [smartInputOpen, setSmartInputOpen] = useState(false);
   const [editCard, setEditCard] = useState<CardType | null>(null);
   const [deleteCard, setDeleteCard] = useState<CardType | null>(null);
+  const [recommendCard, setRecommendCard] = useState<CardType | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
 
   const theme = useTheme();
@@ -219,7 +222,7 @@ export default function LibraryPage() {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 120,
+      width: 160,
       sortable: false,
       renderCell: (params: GridRenderCellParams<CardType>) => (
         <>
@@ -228,6 +231,9 @@ export default function LibraryPage() {
           </IconButton>
           <IconButton size="small" onClick={() => setEditCard(params.row)}>
             <EditIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" onClick={() => setRecommendCard(params.row)} color="secondary">
+            <TipsAndUpdatesIcon fontSize="small" />
           </IconButton>
           <IconButton size="small" onClick={() => setDeleteCard(params.row)} color="error">
             <DeleteIcon fontSize="small" />
@@ -311,6 +317,9 @@ export default function LibraryPage() {
                 <IconButton size="small" onClick={() => setEditCard(card)}>
                   <EditIcon />
                 </IconButton>
+                <IconButton size="small" onClick={() => setRecommendCard(card)} color="secondary">
+                  <TipsAndUpdatesIcon />
+                </IconButton>
                 <IconButton size="small" onClick={() => setDeleteCard(card)} color="error">
                   <DeleteIcon />
                 </IconButton>
@@ -384,6 +393,17 @@ export default function LibraryPage() {
         onClose={() => setEditCard(null)}
         onSuccess={() => {
           setEditCard(null);
+          fetchCards();
+        }}
+      />
+
+      {/* Recommend Dialog */}
+      <RecommendDialog
+        card={recommendCard}
+        existingTexts={cards.map((c) => c.target_text)}
+        onClose={() => setRecommendCard(null)}
+        onSuccess={() => {
+          setRecommendCard(null);
           fetchCards();
         }}
       />
