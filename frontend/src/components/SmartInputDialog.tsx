@@ -25,6 +25,7 @@ import {
   ListItemIcon,
 } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import { generateApi, cardsApi, tagsApi } from '../services/api';
@@ -112,7 +113,7 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
     setError('');
 
     try {
-      const response = await generateApi.generate(inputText.trim());
+      const response = await generateApi.generate(buildGenerationPrompt(inputText.trim()));
       const data: GeneratedData = response.data;
       setGeneratedData(data);
       setEditedData(data);
@@ -212,6 +213,33 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
     }
   };
 
+  const buildGenerationPrompt = (targetText: string, targetMeaning?: string, contextSentence?: string) => {
+    const lines = [
+      'Generate flashcard data for this English item.',
+      `target_text: ${targetText.trim()}`,
+    ];
+
+    const meaning = targetMeaning?.trim();
+    const context = contextSentence?.trim();
+
+    if (meaning) {
+      lines.push(`target_meaning: ${meaning}`);
+    }
+
+    if (context) {
+      lines.push(`context_sentence: ${context}`);
+    }
+
+    lines.push(
+      'Rules:',
+      '- If target_meaning is provided, use it as the primary meaning hint and generate the other fields from target_text + target_meaning.',
+      '- If context_sentence is provided, generate context_translation and cloze_sentence from target_text, target_meaning, and context_sentence.',
+      '- Return JSON only.',
+    );
+
+    return lines.join('\n');
+  };
+
   const handleRegenerate = async () => {
     if (!editedData?.target_text?.trim()) return;
 
@@ -219,10 +247,13 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
     setError('');
 
     try {
-      const input = editedData.target_meaning?.trim()
-        ? `${editedData.target_text.trim()} (${editedData.target_meaning.trim()})`
-        : editedData.target_text.trim();
-      const response = await generateApi.generate(input);
+      const response = await generateApi.generate(
+        buildGenerationPrompt(
+          editedData.target_text,
+          editedData.target_meaning,
+          editedData.context_sentence
+        )
+      );
       const data: GeneratedData = response.data;
       setEditedData((prev) => prev ? {
         ...prev,
@@ -408,15 +439,25 @@ export default function SmartInputDialog({ open, onClose, onSuccess }: SmartInpu
 
             <Divider sx={{ my: 2 }} />
 
-            <TextField
-              fullWidth
-              label="Context Sentence"
-              value={editedData?.context_sentence || ''}
-              onChange={(e) => updateField('context_sentence', e.target.value)}
-              margin="normal"
-              size="small"
-              multiline
-            />
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mt: 2 }}>
+              <TextField
+                fullWidth
+                label="Context Sentence"
+                value={editedData?.context_sentence || ''}
+                onChange={(e) => updateField('context_sentence', e.target.value)}
+                size="small"
+                multiline
+              />
+              <IconButton
+                aria-label="clear context sentence"
+                onClick={() => updateField('context_sentence', '')}
+                disabled={!editedData?.context_sentence?.trim()}
+                color="error"
+                sx={{ mt: 0.5 }}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Box>
 
             <TextField
               fullWidth
