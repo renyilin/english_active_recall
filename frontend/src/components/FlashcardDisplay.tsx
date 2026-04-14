@@ -3,6 +3,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import type { Card } from '../services/api';
 import { ttsApi } from '../services/api';
+import { getPlaybackAudioElement, primePlaybackAudio } from '../utils/audioPlayback';
 
 interface FlashcardDisplayProps {
   card: Card;
@@ -26,8 +27,17 @@ export default function FlashcardDisplay({
 
   const toggleAutoPlay = (e: React.MouseEvent) => {
     e.stopPropagation();
+    void primePlaybackAudio();
     onAudioEnabledChange(!isAudioEnabled);
   };
+
+  const getAudioElement = useCallback(() => {
+    if (!audioRef.current) {
+      audioRef.current = getPlaybackAudioElement();
+    }
+
+    return audioRef.current;
+  }, []);
 
   const stopAudio = useCallback(() => {
     playbackRequestIdRef.current += 1;
@@ -35,7 +45,6 @@ export default function FlashcardDisplay({
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
-      audioRef.current = null;
     }
 
     window.speechSynthesis.cancel();
@@ -82,16 +91,15 @@ export default function FlashcardDisplay({
       }
 
       // Play audio
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
+      const audio = getAudioElement();
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = audioUrl;
       await audio.play();
 
       if (playbackRequestIdRef.current !== requestId) {
         audio.pause();
         audio.currentTime = 0;
-        if (audioRef.current === audio) {
-          audioRef.current = null;
-        }
       }
     } catch (error) {
       if (playbackRequestIdRef.current !== requestId) {
@@ -105,7 +113,7 @@ export default function FlashcardDisplay({
       utterance.rate = 0.9;
       window.speechSynthesis.speak(utterance);
     }
-  }, [getAudioUrl, stopAudio]);
+  }, [getAudioElement, getAudioUrl, stopAudio]);
 
   // Cleanup blob URLs on unmount
   useEffect(() => {
@@ -221,6 +229,7 @@ export default function FlashcardDisplay({
             sx={{ mt: 2 }}
             onClick={(e) => {
               e.stopPropagation();
+              void primePlaybackAudio();
               speakText(card.context_sentence);
             }}
             color="primary"
@@ -240,7 +249,10 @@ export default function FlashcardDisplay({
         minHeight: 300, // Keep minHeight on container
         cursor: 'pointer',
       }}
-      onClick={onFlip}
+      onClick={() => {
+        void primePlaybackAudio();
+        onFlip();
+      }}
     >
       <Box
         sx={{

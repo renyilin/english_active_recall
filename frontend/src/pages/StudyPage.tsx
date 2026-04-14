@@ -25,6 +25,7 @@ import { cardsApi } from '../services/api';
 import type { Card as CardType } from '../services/api';
 import FlashcardDisplay from '../components/FlashcardDisplay';
 import TagSelector from '../components/TagSelector';
+import { primePlaybackAudio } from '../utils/audioPlayback';
 
 const AUTO_FLIP_DELAY_MS = 3000;
 const AUTO_ADVANCE_DELAY_MS = 9000;
@@ -57,6 +58,7 @@ export default function StudyPage() {
   }, []);
 
   const toggleAutoPlay = useCallback(() => {
+    void primePlaybackAudio();
     setIsAutoPlayEnabled((prev) => {
       const nextValue = !prev;
       localStorage.setItem('autoPlayStudy', String(nextValue));
@@ -65,6 +67,8 @@ export default function StudyPage() {
   }, []);
 
   const handleStartStudy = async () => {
+    void primePlaybackAudio();
+
     if (strategy === 'tag' && selectedTagIds.length === 0) {
       alert('Please select at least one tag');
       return;
