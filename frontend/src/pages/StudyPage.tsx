@@ -13,15 +13,22 @@ import {
   Paper,
   Stack,
   IconButton,
+  Tooltip,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import { cardsApi } from '../services/api';
 import type { Card as CardType } from '../services/api';
 import FlashcardDisplay from '../components/FlashcardDisplay';
 import TagSelector from '../components/TagSelector';
+
+const AUTO_FLIP_DELAY_MS = 3000;
+const AUTO_ADVANCE_DELAY_MS = 9000;
+const AUTO_REPEAT_COUNT = 2;
 
 export default function StudyPage() {
   // Phase 1: Configuration state
@@ -36,6 +43,26 @@ export default function StudyPage() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSessionComplete, setIsSessionComplete] = useState(false);
+  const [autoPlayRepeatCount, setAutoPlayRepeatCount] = useState(0);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(() => {
+    return localStorage.getItem('autoPlayAudio') === 'true';
+  });
+  const [isAutoPlayEnabled, setIsAutoPlayEnabled] = useState(() => {
+    return localStorage.getItem('autoPlayStudy') === 'true';
+  });
+
+  const handleAudioEnabledChange = useCallback((enabled: boolean) => {
+    setIsAudioEnabled(enabled);
+    localStorage.setItem('autoPlayAudio', String(enabled));
+  }, []);
+
+  const toggleAutoPlay = useCallback(() => {
+    setIsAutoPlayEnabled((prev) => {
+      const nextValue = !prev;
+      localStorage.setItem('autoPlayStudy', String(nextValue));
+      return nextValue;
+    });
+  }, []);
 
   const handleStartStudy = async () => {
     if (strategy === 'tag' && selectedTagIds.length === 0) {
@@ -51,6 +78,7 @@ export default function StudyPage() {
       setCurrentIndex(0);
       setIsFlipped(false);
       setIsSessionComplete(false);
+      setAutoPlayRepeatCount(0);
       setIsConfiguring(false);
     } catch (error) {
       console.error('Failed to fetch study cards:', error);
@@ -64,6 +92,7 @@ export default function StudyPage() {
     if (currentIndex < studyCards.length - 1) {
       setCurrentIndex((prev) => prev + 1);
       setIsFlipped(false);
+      setAutoPlayRepeatCount(0);
     } else {
       setIsSessionComplete(true);
     }
@@ -73,6 +102,7 @@ export default function StudyPage() {
     if (currentIndex > 0) {
       setCurrentIndex((prev) => prev - 1);
       setIsFlipped(false);
+      setAutoPlayRepeatCount(0);
     }
   }, [currentIndex]);
 
@@ -82,6 +112,7 @@ export default function StudyPage() {
     setCurrentIndex(0);
     setIsFlipped(false);
     setIsSessionComplete(false);
+    setAutoPlayRepeatCount(0);
   };
 
   // Keyboard navigation
@@ -105,6 +136,39 @@ export default function StudyPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handlePreviousCard, handleNextCard, isConfiguring, isLoading, isSessionComplete, studyCards.length]);
+
+  useEffect(() => {
+    if (!isAutoPlayEnabled || isConfiguring || isLoading || isSessionComplete || studyCards.length === 0) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      if (isFlipped) {
+        if (autoPlayRepeatCount < AUTO_REPEAT_COUNT - 1) {
+          setIsFlipped(false);
+          setAutoPlayRepeatCount((prev) => prev + 1);
+          return;
+        }
+
+        handleNextCard();
+        return;
+      }
+
+      setIsFlipped(true);
+    }, isFlipped ? AUTO_ADVANCE_DELAY_MS : AUTO_FLIP_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    autoPlayRepeatCount,
+    currentIndex,
+    handleNextCard,
+    isAutoPlayEnabled,
+    isConfiguring,
+    isFlipped,
+    isLoading,
+    isSessionComplete,
+    studyCards.length,
+  ]);
 
   const currentCard = studyCards[currentIndex];
 
@@ -265,13 +329,25 @@ export default function StudyPage() {
   return (
     <Box sx={{ p: 3, maxWidth: 600, mx: 'auto' }}>
       {/* Progress */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
         <Typography variant="h5">Study Mode</Typography>
-        <Chip
-          label={`${currentIndex + 1} / ${studyCards.length}`}
-          color="primary"
-          variant="outlined"
-        />
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Chip
+            label={`${currentIndex + 1} / ${studyCards.length}`}
+            color="primary"
+            variant="outlined"
+          />
+          <Tooltip title={isAutoPlayEnabled ? 'Pause autoplay' : 'Start autoplay'}>
+            <Button
+              variant={isAutoPlayEnabled ? 'contained' : 'outlined'}
+              color={isAutoPlayEnabled ? 'success' : 'primary'}
+              startIcon={isAutoPlayEnabled ? <PauseCircleOutlineIcon /> : <PlayCircleOutlineIcon />}
+              onClick={toggleAutoPlay}
+            >
+              {isAutoPlayEnabled ? 'Auto On' : 'Auto Off'}
+            </Button>
+          </Tooltip>
+        </Stack>
       </Box>
 
       {/* Flashcard with arrow navigation */}
@@ -305,6 +381,8 @@ export default function StudyPage() {
           card={currentCard}
           isFlipped={isFlipped}
           onFlip={() => setIsFlipped(!isFlipped)}
+          isAudioEnabled={isAudioEnabled}
+          onAudioEnabledChange={handleAudioEnabledChange}
         />
 
         {/* Right arrow */}

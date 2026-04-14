@@ -18,6 +18,14 @@ export default function TestPage() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isReviewing, setIsReviewing] = useState(false);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(() => {
+    return localStorage.getItem('autoPlayAudio') === 'true';
+  });
+
+  const handleAudioEnabledChange = useCallback((enabled: boolean) => {
+    setIsAudioEnabled(enabled);
+    localStorage.setItem('autoPlayAudio', String(enabled));
+  }, []);
 
   const fetchDueCards = useCallback(async () => {
     setIsLoading(true);
@@ -140,6 +148,8 @@ export default function TestPage() {
         card={currentCard}
         isFlipped={isFlipped}
         onFlip={() => setIsFlipped(!isFlipped)}
+        isAudioEnabled={isAudioEnabled}
+        onAudioEnabledChange={handleAudioEnabledChange}
       />
 
       {/* Grading buttons */}

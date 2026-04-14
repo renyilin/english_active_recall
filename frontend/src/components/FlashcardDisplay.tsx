@@ -1,5 +1,5 @@
 import { Box, Typography, Card as MuiCard, CardContent, IconButton, Chip } from '@mui/material';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import type { Card } from '../services/api';
 import { ttsApi } from '../services/api';
@@ -8,30 +8,38 @@ interface FlashcardDisplayProps {
   card: Card;
   isFlipped: boolean;
   onFlip: () => void;
+  isAudioEnabled: boolean;
+  onAudioEnabledChange: (enabled: boolean) => void;
 }
 
-export default function FlashcardDisplay({ card, isFlipped, onFlip }: FlashcardDisplayProps) {
-  const [autoPlayEnabled, setAutoPlayEnabled] = useState(() => {
-    return localStorage.getItem('autoPlayAudio') === 'true';
-  });
-
+export default function FlashcardDisplay({
+  card,
+  isFlipped,
+  onFlip,
+  isAudioEnabled,
+  onAudioEnabledChange,
+}: FlashcardDisplayProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioCacheRef = useRef<Map<string, string>>(new Map()); // text -> blob URL
 
   const toggleAutoPlay = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const newValue = !autoPlayEnabled;
-    setAutoPlayEnabled(newValue);
-    localStorage.setItem('autoPlayAudio', String(newValue));
+    onAudioEnabledChange(!isAudioEnabled);
   };
+
+  const stopAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    window.speechSynthesis.cancel();
+  }, []);
 
   const speakText = useCallback(async (text: string) => {
     try {
       // Stop any currently playing audio
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
+      stopAudio();
 
       // Check cache first
       let audioUrl = audioCacheRef.current.get(text);
@@ -55,25 +63,35 @@ export default function FlashcardDisplay({ card, isFlipped, onFlip }: FlashcardD
       utterance.rate = 0.9;
       window.speechSynthesis.speak(utterance);
     }
-  }, []);
+  }, [stopAudio]);
 
   // Cleanup blob URLs on unmount
   useEffect(() => {
+    const audioCache = audioCacheRef.current;
+
     return () => {
-      audioCacheRef.current.forEach((url) => URL.revokeObjectURL(url));
-      audioCacheRef.current.clear();
+      stopAudio();
+      audioCache.forEach((url) => URL.revokeObjectURL(url));
+      audioCache.clear();
     };
-  }, []);
+  }, [stopAudio]);
+
+  // Stop audio when navigating away from a revealed answer or to a new card.
+  useEffect(() => {
+    if (!isFlipped) {
+      stopAudio();
+    }
+  }, [card.id, isFlipped, stopAudio]);
 
   // Handle auto-play when flipped
   useEffect(() => {
-    if (isFlipped && autoPlayEnabled) {
+    if (isFlipped && isAudioEnabled) {
       const timer = setTimeout(() => {
         speakText(card.context_sentence);
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [isFlipped, autoPlayEnabled, card.context_sentence, speakText]);
+  }, [isFlipped, isAudioEnabled, card.context_sentence, speakText]);
 
   const renderCardContent = (side: 'front' | 'back') => (
     <CardContent
@@ -93,7 +111,7 @@ export default function FlashcardDisplay({ card, isFlipped, onFlip }: FlashcardD
       <IconButton
         onClick={toggleAutoPlay}
         size="small"
-        color={autoPlayEnabled ? 'primary' : 'default'}
+        color={isAudioEnabled ? 'primary' : 'default'}
         sx={{
           position: 'absolute',
           top: 8,
@@ -101,10 +119,10 @@ export default function FlashcardDisplay({ card, isFlipped, onFlip }: FlashcardD
           opacity: 0.7,
           '&:hover': { opacity: 1 },
         }}
-        title={autoPlayEnabled ? "Disable auto-play" : "Enable auto-play"}
+        title={isAudioEnabled ? 'Disable voice auto-play' : 'Enable voice auto-play'}
       >
         <VolumeUpIcon />
-        {!autoPlayEnabled && (
+        {!isAudioEnabled && (
           <Box
             sx={{
               position: 'absolute',
