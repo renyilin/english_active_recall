@@ -21,6 +21,8 @@ export default function FlashcardDisplay({
 }: FlashcardDisplayProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioCacheRef = useRef<Map<string, string>>(new Map()); // text -> blob URL
+  const pendingAudioRef = useRef<Map<string, Promise<string>>>(new Map());
+  const playbackRequestIdRef = useRef(0);
 
   const toggleAutoPlay = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -28,34 +30,74 @@ export default function FlashcardDisplay({
   };
 
   const stopAudio = useCallback(() => {
+    playbackRequestIdRef.current += 1;
+
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+      audioRef.current = null;
     }
 
     window.speechSynthesis.cancel();
   }, []);
 
+  const getAudioUrl = useCallback(async (text: string) => {
+    const cachedAudioUrl = audioCacheRef.current.get(text);
+    if (cachedAudioUrl) {
+      return cachedAudioUrl;
+    }
+
+    const pendingRequest = pendingAudioRef.current.get(text);
+    if (pendingRequest) {
+      return pendingRequest;
+    }
+
+    const audioRequest = ttsApi.generateAudio(text)
+      .then((blob) => {
+        const audioUrl = URL.createObjectURL(blob);
+        audioCacheRef.current.set(text, audioUrl);
+        pendingAudioRef.current.delete(text);
+        return audioUrl;
+      })
+      .catch((error) => {
+        pendingAudioRef.current.delete(text);
+        throw error;
+      });
+
+    pendingAudioRef.current.set(text, audioRequest);
+    return audioRequest;
+  }, []);
+
   const speakText = useCallback(async (text: string) => {
+    const requestId = playbackRequestIdRef.current + 1;
+
     try {
       // Stop any currently playing audio
       stopAudio();
+      const audioUrl = await getAudioUrl(text);
 
-      // Check cache first
-      let audioUrl = audioCacheRef.current.get(text);
-
-      if (!audioUrl) {
-        // Fetch from API
-        const blob = await ttsApi.generateAudio(text);
-        audioUrl = URL.createObjectURL(blob);
-        audioCacheRef.current.set(text, audioUrl);
+      // Ignore stale async completions after the card/view state has changed.
+      if (playbackRequestIdRef.current !== requestId) {
+        return;
       }
 
       // Play audio
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
       await audio.play();
+
+      if (playbackRequestIdRef.current !== requestId) {
+        audio.pause();
+        audio.currentTime = 0;
+        if (audioRef.current === audio) {
+          audioRef.current = null;
+        }
+      }
     } catch (error) {
+      if (playbackRequestIdRef.current !== requestId) {
+        return;
+      }
+
       console.error('Failed to play audio:', error);
       // Fallback to Web Speech API if TTS fails
       const utterance = new SpeechSynthesisUtterance(text);
@@ -63,7 +105,7 @@ export default function FlashcardDisplay({
       utterance.rate = 0.9;
       window.speechSynthesis.speak(utterance);
     }
-  }, [stopAudio]);
+  }, [getAudioUrl, stopAudio]);
 
   // Cleanup blob URLs on unmount
   useEffect(() => {
@@ -71,6 +113,7 @@ export default function FlashcardDisplay({
 
     return () => {
       stopAudio();
+      pendingAudioRef.current.clear();
       audioCache.forEach((url) => URL.revokeObjectURL(url));
       audioCache.clear();
     };
