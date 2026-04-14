@@ -11,6 +11,7 @@ env/
 # IDE
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 .history
@@ -38,6 +39,9 @@ alembic/versions/*.py
 
 # TTS audio cache
 cache/
+
+# Worktrees
+.worktrees/
 
 # OS
 .DS_Store
