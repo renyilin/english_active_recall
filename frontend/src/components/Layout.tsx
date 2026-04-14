@@ -45,7 +45,7 @@ export default function Layout() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'flashcards_export.xlsx';
+      a.download = 'flashcards_export.csv';
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -101,7 +101,7 @@ export default function Layout() {
             color="inherit"
             onClick={handleExport}
             disabled={exporting}
-            title="Export to Excel"
+            title="Export to CSV"
           >
             <FileDownloadIcon />
           </IconButton>

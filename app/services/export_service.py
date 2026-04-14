@@ -1,6 +1,5 @@
-from io import BytesIO
-
-from openpyxl import Workbook
+import csv
+from io import BytesIO, StringIO
 
 
 HEADERS = [
@@ -19,19 +18,18 @@ HEADERS = [
 
 
 class ExportService:
-    """Service to export cards to XLSX format."""
+    """Service to export cards to CSV format."""
 
-    def cards_to_xlsx(self, cards: list) -> BytesIO:
-        """Convert a list of Card objects to an XLSX file in memory."""
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Cards"
+    def cards_to_csv(self, cards: list) -> BytesIO:
+        """Convert a list of Card objects to a CSV file in memory."""
+        csv_buffer = StringIO(newline="")
+        writer = csv.writer(csv_buffer)
 
-        ws.append(HEADERS)
+        writer.writerow(HEADERS)
 
         for card in cards:
             tags_str = ", ".join(tag.name for tag in card.tags)
-            ws.append([
+            writer.writerow([
                 card.type,
                 card.target_text,
                 card.target_meaning,
@@ -45,7 +43,4 @@ class ExportService:
                 card.created_at.strftime("%Y-%m-%d %H:%M"),
             ])
 
-        buf = BytesIO()
-        wb.save(buf)
-        buf.seek(0)
-        return buf
+        return BytesIO(csv_buffer.getvalue().encode("utf-8-sig"))

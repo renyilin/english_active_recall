@@ -17,7 +17,7 @@ async def export_cards(
     current_user: CurrentUser,
     session: Annotated[Session, Depends(get_session)],
 ) -> StreamingResponse:
-    """Export all cards for the current user as an XLSX file."""
+    """Export all cards for the current user as a CSV file."""
     statement = (
         select(Card)
         .where(Card.user_id == current_user.id)
@@ -26,12 +26,12 @@ async def export_cards(
     cards = list(session.exec(statement).all())
 
     export_service = ExportService()
-    xlsx_buf = export_service.cards_to_xlsx(cards)
+    csv_buf = export_service.cards_to_csv(cards)
 
     return StreamingResponse(
-        xlsx_buf,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        csv_buf,
+        media_type="text/csv",
         headers={
-            "Content-Disposition": "attachment; filename=flashcards_export.xlsx"
+            "Content-Disposition": "attachment; filename=flashcards_export.csv"
         },
     )

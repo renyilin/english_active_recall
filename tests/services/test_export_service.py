@@ -1,8 +1,7 @@
+import csv
 from datetime import datetime
 from io import BytesIO
 from unittest.mock import MagicMock
-
-import openpyxl
 
 from app.services.export_service import ExportService
 
@@ -42,12 +41,11 @@ def _make_mock_tag(name):
 
 
 class TestExportService:
-    def test_generates_xlsx_with_headers(self):
+    def test_generates_csv_with_headers(self):
         service = ExportService()
-        buf = service.cards_to_xlsx([])
-        wb = openpyxl.load_workbook(buf)
-        ws = wb.active
-        headers = [cell.value for cell in ws[1]]
+        buf = service.cards_to_csv([])
+        rows = list(csv.reader(buf.getvalue().decode("utf-8-sig").splitlines()))
+        headers = rows[0]
         assert headers == [
             "Type",
             "Word/Phrase",
@@ -62,15 +60,14 @@ class TestExportService:
             "Created At",
         ]
 
-    def test_generates_xlsx_with_card_data(self):
+    def test_generates_csv_with_card_data(self):
         tag1 = _make_mock_tag("greetings")
         tag2 = _make_mock_tag("basics")
         card = _make_mock_card(tags=[tag1, tag2])
         service = ExportService()
-        buf = service.cards_to_xlsx([card])
-        wb = openpyxl.load_workbook(buf)
-        ws = wb.active
-        row = [cell.value for cell in ws[2]]
+        buf = service.cards_to_csv([card])
+        rows = list(csv.reader(buf.getvalue().decode("utf-8-sig").splitlines()))
+        row = rows[1]
         assert row[0] == "phrase"
         assert row[1] == "hello"
         assert row[2] == "greeting"
@@ -78,19 +75,18 @@ class TestExportService:
         assert row[4] == "Translation here"
         assert row[5] == "___, how are you?"
         assert row[6] == "greetings, basics"
-        assert row[7] == 1
-        assert row[8] == 2.5
+        assert row[7] == "1"
+        assert row[8] == "2.5"
 
-    def test_generates_xlsx_with_multiple_cards(self):
+    def test_generates_csv_with_multiple_cards(self):
         cards = [_make_mock_card(target_text=f"word{i}") for i in range(3)]
         service = ExportService()
-        buf = service.cards_to_xlsx(cards)
-        wb = openpyxl.load_workbook(buf)
-        ws = wb.active
-        assert ws.max_row == 4  # 1 header + 3 data rows
+        buf = service.cards_to_csv(cards)
+        rows = list(csv.reader(buf.getvalue().decode("utf-8-sig").splitlines()))
+        assert len(rows) == 4  # 1 header + 3 data rows
 
     def test_returns_bytes_io(self):
         service = ExportService()
-        buf = service.cards_to_xlsx([])
+        buf = service.cards_to_csv([])
         assert isinstance(buf, BytesIO)
         assert buf.tell() == 0  # seek position reset to start
